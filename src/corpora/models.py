@@ -12,7 +12,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 # --------------------------------------------------------------------------- #
 # Corpus
 # --------------------------------------------------------------------------- #
@@ -22,7 +21,14 @@ class Document(BaseModel):
     """A single source document inside a snapshot."""
 
     doc_key: str
-    """Content-stable identity. NOT a filesystem path — paths move, documents don't."""
+    """Where this document currently lives: the normalized path relative to the corpus root.
+
+    A LOCATOR, not identity. Identity is `Anchor.span_hash`. `doc_key` tells resolution
+    which document to search first; when it misses, the cascade searches the rest of the
+    snapshot and finds the span anyway. That is why a renamed file resolves to
+    VALID_RELOCATED rather than DESTROYED, with no rename detection and no id mapping.
+    Never treat a `doc_key` match as evidence that the evidence is intact. See ADR-0010.
+    """
 
     source_path: str
     """Where it was found at capture time. Diagnostic only, never identity."""
@@ -180,6 +186,9 @@ class Anchor(BaseModel):
     """
 
     doc_key: str
+    """The document this span was captured from. A locator — resolution searches here
+    first and falls through to the rest of the snapshot. See ADR-0010."""
+
     heading_path: list[str]
     span_hash: str
     """SHA-256 of the normalized answer text. Primary identity."""
@@ -469,6 +478,16 @@ class Diff(BaseModel):
 
     from_snapshot_id: str
     to_snapshot_id: str
+    computed_at: datetime
+    """When this diff was computed.
+
+    Required, not defaulted: `policy.should_propose_retirement` needs an ordered
+    `(datetime, Resolution)` history per anchor, and a default would silently stamp the
+    wrong time on a diff replayed from stored snapshots. Nothing accumulates this yet —
+    the history store belongs with `run/` and SQLite. This field is the seam so the data
+    exists when that gets built. See ADR-0008.
+    """
+
     added_docs: list[str] = Field(default_factory=list)
     removed_docs: list[str] = Field(default_factory=list)
     changed_docs: list[str] = Field(default_factory=list)

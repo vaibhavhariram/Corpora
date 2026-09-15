@@ -1,0 +1,26 @@
+# Paths that require review from a human before merge.
+#
+# This file is the enforcement half of the "do not loop on this" list. The other half is
+# scripts/check_invariants.py. Both are listed here, deliberately: an agent that can edit
+# its own gate or its own workflow disables every guardrail in a single PR, which is the
+# same reward-hacking failure as editing the test suite, one level up.
+#
+# Requires branch protection with "Require review from Code Owners" enabled, otherwise
+# this file is decorative.
+
+# --- the verifier: the scorer the loop must not be able to edit ---
+/tests/test_anchors.py          @vaibhavhariram
+/tests/fixtures/mutations.py    @vaibhavhariram
+
+# --- semantics: enum names and the domain model are customer-facing ---
+/src/corpora/models.py          @vaibhavhariram
+
+# --- the rules themselves ---
+/CLAUDE.md                      @vaibhavhariram
+/docs/architecture.md           @vaibhavhariram
+/docs/decisions/                @vaibhavhariram
+
+# --- the loop's own machinery ---
+/scripts/                       @vaibhavhariram
+/.github/                       @vaibhavhariram
+/Makefile                       @vaibhavhariram

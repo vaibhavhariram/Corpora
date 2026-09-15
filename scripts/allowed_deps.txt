@@ -1,0 +1,18 @@
+# Every dependency Corpora is allowed to declare in pyproject.toml.
+#
+# A new dependency is the earliest observable signal of scope creep, which is why this
+# file exists and why check_invariants.py fails on anything not listed here. Adding a
+# line is cheap; it just has to be a deliberate act with a reason in the PR description.
+#
+# Before adding: does this pull in retrieval, ranking, or embeddings? If so the answer is
+# no, and the reason is invariant 1 rather than the merits of the library.
+
+pydantic          # domain model
+typer             # cli argument parsing only, per invariant 6
+
+pytest            # dev
+mypy              # dev
+ruff              # dev
+
+openpyxl          # [xlsx] — tables are first-class, ahead of PDF
+pymupdf           # [pdf]  — pinned exactly; extraction is non-deterministic across versions

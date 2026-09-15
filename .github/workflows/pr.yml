@@ -1,0 +1,96 @@
+name: PR
+
+# Cheap deterministic gate first, expensive judgment second.
+#
+# Both jobs live in one workflow file because `needs:` cannot cross workflow files, and
+# the ordering is the point: a PR that added chromadb should fail in two seconds for free,
+# not receive a thoughtful paragraph about its abstraction.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  invariants:
+    name: invariants
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the change-sensitive checks diff against the merge-base.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Invariants
+        env:
+          # Passed as env rather than interpolated into the shell — PR body and labels are
+          # attacker-controlled on any repo that accepts outside contributions.
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python3 scripts/check_invariants.py --base "origin/${{ github.base_ref }}"
+
+      - name: Tests
+        run: pytest
+
+      - name: Types
+        run: mypy
+
+      - name: Lint
+        run: ruff check src scripts
+
+  review:
+    name: review
+    needs: invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: --max-turns 20
+          prompt: |
+            Review this pull request. Read CLAUDE.md and docs/architecture.md first.
+
+            Review ONLY the four things below. Everything else is already covered by
+            checks that ran before you: ruff, mypy --strict, pytest, and
+            scripts/check_invariants.py (which mechanically enforces no-retrieval,
+            no-LLM-in-grading, normalizer versioning, verifier protection, library-first,
+            and orphan modules).
+
+            1. Does the ADR match what the code actually does? A PR that claims one
+               decision and implements another is the failure this repo's process exists
+               to prevent.
+            2. Is there code here with no test behind it, or a test that asserts less than
+               its name claims?
+            3. Did this exceed the scope of the issue it closes? Name what went beyond it.
+            4. Is the abstraction right? This is the only judgment call no check can make.
+
+            Do NOT comment on formatting, import ordering, type annotations, naming style,
+            or anything a linter reports. Restating what a linter already said trains the
+            reviewer to skim, and skimming is how a real finding gets missed. If you have
+            nothing to say under the four headings, say exactly that and stop.
+
+            Be specific: cite file and line. If you are unsure whether something is a
+            problem, say you are unsure rather than asserting it.

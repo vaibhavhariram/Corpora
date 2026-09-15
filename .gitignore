@@ -225,3 +225,6 @@ snapshots/
 runs/
 reports/
 *.checkpoint.json
+
+# macOS
+.DS_Store

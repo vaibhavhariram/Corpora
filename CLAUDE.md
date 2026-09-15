@@ -162,6 +162,44 @@ wrong. A suite full of `STALE` tests reports green while lying.
 - Deterministic tests only. Any test that calls an LLM is marked `@pytest.mark.llm` and is
   excluded from the default run.
 
+## The loop
+
+Work arrives as a GitHub issue labelled `agent:ready` and leaves as one PR. At most two
+agent PRs are open at once — review capacity is the binding constraint, not throughput.
+
+Before opening a PR, all four must be clean:
+
+```bash
+make invariants   # deterministic gate — scripts/check_invariants.py
+pytest
+mypy
+ruff check src scripts
+```
+
+**Never open a red PR.** If it will not go green, comment on the issue saying exactly what
+blocked you and stop. A red PR converts review time into debugging time.
+
+`make invariants` mechanically enforces invariants 1, 2, 3, and 6 plus verifier protection
+and orphan modules. It is deterministic on purpose: an LLM asked "does this add retrieval?"
+is right most of the time and silently wrong occasionally, and ADR-0004 applies to our own
+tooling before it applies to anyone else's. Invariants 4 and 5 are not greppable and belong
+in `tests/` once `run/` and `report/` exist.
+
+### Do not loop on these
+
+Everything in `.github/CODEOWNERS` requires human review, and the list is not arbitrary —
+these are the things where no test can state what "right" means:
+
+- `tests/test_anchors.py`, `tests/fixtures/mutations.py` — the scorer
+- `src/corpora/models.py` — enum names and semantics, which are customer-facing
+- `CLAUDE.md`, `docs/architecture.md`, `docs/decisions/` — the rules themselves
+- `scripts/`, `.github/`, `Makefile` — the loop's own machinery
+
+That last group matters most. An agent that can edit `check_invariants.py` or a workflow
+disables every guardrail in one PR, which is reward hacking one level up from editing tests.
+
+Rule of thumb: **if you cannot state the test that proves it right, it is not loopable yet.**
+
 ## Decision records
 
 Any non-obvious choice gets a short ADR in `docs/decisions/NNNN-title.md`: what was decided,

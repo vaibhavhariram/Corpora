@@ -1,0 +1,105 @@
+name: agent-dev
+
+# Pull-based loop. The agent implements one labelled issue and opens one PR.
+#
+# WIP = throughput x review latency, and there is exactly one reviewer. The cap below is
+# the difference between this working and rebuilding the review bottleneck on purpose.
+#
+# `concurrency` alone does NOT cap work in progress — it serializes runs, so four labelled
+# issues still produce four open PRs, just more slowly. The explicit gate does the capping.
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to implement
+        required: true
+        type: string
+
+concurrency:
+  group: agent-dev
+  cancel-in-progress: false
+
+env:
+  MAX_OPEN_AGENT_PRS: 2
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'agent:ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce WIP cap
+        id: wip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number || inputs.issue_number }}
+        run: |
+          OPEN=$(gh pr list --label agent --state open --json number --jq 'length')
+          echo "open agent PRs: $OPEN (cap $MAX_OPEN_AGENT_PRS)"
+          if [ "$OPEN" -ge "$MAX_OPEN_AGENT_PRS" ]; then
+            gh issue edit "$ISSUE" --remove-label 'agent:ready' || true
+            gh issue comment "$ISSUE" --body \
+              "WIP cap reached ($OPEN open agent PRs). Merge or close one, then re-apply \`agent:ready\`."
+            echo "capped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "capped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Declining is not failing. A red X on the issue would train you to ignore red Xs.
+      - uses: anthropics/claude-code-action@v1
+        if: steps.wip.outputs.capped != 'true'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # github_token is deliberately NOT set. With the default GITHUB_TOKEN, GitHub
+          # does not trigger workflows on the resulting commits, so pr.yml would never run
+          # on this PR and the whole gate would be silently bypassed.
+          claude_args: --max-turns 40
+          prompt: |
+            Read CLAUDE.md and docs/architecture.md in full before your first edit.
+
+            Implement issue #${{ github.event.issue.number || inputs.issue_number }}.
+
+            Rules, in priority order:
+
+            1. Write the tests before the code. `tests/` house style: declarative test
+               names that read as invariants, `-> None` annotations, docstrings only where
+               the rationale is not obvious from the name.
+            2. NEVER modify tests/test_anchors.py or tests/fixtures/mutations.py. They are
+               the scorer. If you believe one is wrong, stop and say so on the issue.
+            3. Run `make invariants`, then `pytest`, then `mypy --strict`, then
+               `ruff check src scripts`. All four must be clean.
+            4. Write an ADR in docs/decisions/ for any non-obvious decision, at the moment
+               you make it. State what was decided, why, what was rejected, what reverses it.
+            5. Update docs/status.md.
+            6. Stay inside the issue's scope. If you find something else worth doing, note
+               it on the issue rather than doing it.
+
+            Open a PR ONLY if everything in rule 3 is green, and label it `agent`. If it is
+            not green, do not open a PR — comment on the issue explaining exactly what
+            blocked you, and stop. An agent that opens red PRs converts review time into
+            debugging time, which is the worst trade available.
+
+      # Belt and braces: the WIP cap counts PRs by label, so a PR the agent forgot to
+      # label would be invisible to it. Label anything on a claude/* branch.
+      - name: Ensure agent PRs are labelled
+        if: steps.wip.outputs.capped != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh pr list --state open --json number,headRefName \
+                     --jq '.[] | select(.headRefName | startswith("claude/")) | .number'); do
+            gh pr edit "$n" --add-label agent || true
+          done
