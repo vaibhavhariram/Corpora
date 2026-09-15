@@ -248,12 +248,48 @@ def check_normalizer_versioned(base: str | None) -> list[str]:
     )
     if touched_version:
         return []
+
+    # A comment-only edit changes no behavior, so demanding a version bump for one would
+    # invalidate every anchor ever captured in exchange for nothing. Compare the parsed
+    # tree rather than the diff: comments are absent from the AST, string literals and
+    # docstrings are not, so anything that could alter normalization still trips this.
+    previous = _run(["git", "show", f"{_merge_base(base)}:{target}"])
+    if previous:
+        try:
+            before = _behavioral_ast(previous)
+            after = _behavioral_ast((ROOT / target).read_text(encoding="utf-8"))
+        except SyntaxError:
+            before, after = "", "unparsed"
+        if before == after:
+            return []
     message = (
         f"{target} changed but NORMALIZER_VERSION did not — invariant 3. Changing the "
         f"normalizer silently invalidates every anchor captured under the old version. "
         f"Bump the version and write an ADR."
     )
     return [message]
+
+
+class _StripStringStatements(ast.NodeTransformer):
+    """Drops bare string expressions — docstrings and attribute docs."""
+
+    def visit_Expr(self, node: ast.Expr) -> ast.Expr | None:
+        value = node.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            return None
+        return node
+
+
+def _behavioral_ast(source: str) -> str:
+    """Parsed form with comments and prose removed.
+
+    Comments never reach the AST; bare string statements are stripped here. Neither can
+    change what `normalize()` does, so neither should force a NORMALIZER_VERSION bump —
+    a bump invalidates every anchor ever captured, which is far too high a price for
+    rewording a docstring. Anything that could alter normalization (a dash mapping, a
+    regex pattern, a code path) survives this and still trips the check.
+    """
+    return ast.dump(_StripStringStatements().visit(ast.parse(source)))
 
 
 def check_verifier_protected(base: str | None) -> list[str]:

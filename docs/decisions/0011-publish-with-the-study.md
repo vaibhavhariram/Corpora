@@ -29,11 +29,17 @@ in this market, independent of any NDA question.
 
 Ranked by actual risk:
 
-1. **`SLP_A_VAL`, `F:PCH_SOC_SYNC`, `PCH2`/`PCH3` in the fixtures.** Highest. PCH is Platform
-   Controller Hub; these read as real signal names in a repo authored by a recent intern.
-   Rename to something obviously generic — `PWR_SEQ_VAL`, `F:LINK_SYNC`, `DEV_A`/`DEV_B`.
-   **Note:** this touches `tests/fixtures/mutations.py`, so after branch protection lands it
-   requires a `verifier-change` label and an ADR. It is the one item whose price goes up.
+1. **Fixture identifiers that read as one vendor's internal signal names. — DONE.**
+   Renamed to generic equivalents across fixtures, tests, the normalizer's prose, and the
+   docs, while it was still a free edit. This was the highest-risk item and the only one
+   whose price rises: it touches `tests/fixtures/mutations.py`, so after branch protection
+   lands the same change would need a `verifier-change` label and an ADR.
+
+   Done early on purpose. The mutation table is the study artifact, so it publishes when
+   the study does. Renaming the verifier in the same week as shipping the most important
+   thing in the repo is the worst available timing; better to let the new names sit under
+   a green suite for two months first. The old names are deliberately not restated here —
+   a record naming them would republish exactly what the rename removed.
 2. **"29 of 59 real queries returned literally nothing"** and the pilot recall figures in
    CLAUDE.md. A named-adjacent company's internal quality failure, attributable in one click.
    Keep the lesson, delete the numbers.

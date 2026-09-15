@@ -72,7 +72,7 @@ What it must handle:
   A spec author typing an en dash instead of a hyphen broke real queries.
 - Whitespace variants (non-breaking space, thin space, tab) collapsed to single ASCII space.
 - Line endings normalized; trailing whitespace stripped; runs of 3+ blank lines collapsed.
-- **Case preserved.** `SLP_A_VAL` and `slp_a_val` are different identifiers. Do not lowercase.
+- **Case preserved.** `PWR_SEQ_VAL` and `pwr_seq_val` are different identifiers. Do not lowercase.
 - **Technical identifiers preserved byte-for-byte.** Tokens containing `=`, `:`, `_`, mixed
   case with digits, or hex-like patterns must not be split, spaced, or re-cased.
 
@@ -181,8 +181,8 @@ five primary categories, two exploratory, four reject, across three eligibility 
 Mandatory rules:
 
 - **Verbatim technical token rule.** Every technical-looking token in the question must
-  appear byte-identical in the anchored span. If the generator wrote `SLP_A_VAL = 0` with
-  spaces and the document says `SLP_A_VAL=0`, the test is testing the wrong string. Reject.
+  appear byte-identical in the anchored span. If the generator wrote `PWR_SEQ_VAL = 0` with
+  spaces and the document says `PWR_SEQ_VAL=0`, the test is testing the wrong string. Reject.
 - Answerability: the anchored span must actually contain the answer.
 - Deduplication against existing benchmark questions.
 - Applicability: the question must be answerable within a single applicability scope, or it

@@ -9,7 +9,7 @@ every `Snapshot`. Changing the normalizer is a breaking change requiring a versi
 ## Why
 On the prior system, query-side and index-side text were normalized differently. The same
 token was stored one way and looked up another. Production queries returned literally
-nothing: technical identifiers like `SLP_A_VAL=0`, `be=0`, `F:PCH_SOC_SYNC`, plus Unicode
+nothing: technical identifiers like `PWR_SEQ_VAL=0`, `be=0`, `F:LINK_SYNC`, plus Unicode
 dash variants, broke tokenization before retrieval ran. The remediation was correctly
 described internally as a vocabulary migration requiring reindexing.
 
@@ -18,7 +18,7 @@ and every benchmark silently becomes invalid. Versioning makes that detectable i
 silent.
 
 ## Constraints the normalizer must honor
-- Case is preserved. `SLP_A_VAL` != `slp_a_val`.
+- Case is preserved. `PWR_SEQ_VAL` != `pwr_seq_val`.
 - Technical identifiers are never split, spaced, or re-cased.
 - Dash, space, and quote variants collapse to ASCII.
 

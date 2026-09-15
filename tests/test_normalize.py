@@ -12,7 +12,7 @@ from corpora.corpus.normalize import (
 
 
 def test_idempotent() -> None:
-    s = "Section  3.1 \u2013 the F:PCH_SOC_SYNC handshake\r\n\r\n\r\ntimes out."
+    s = "Section  3.1 \u2013 the F:LINK_SYNC handshake\r\n\r\n\r\ntimes out."
     assert normalize(normalize(s)) == normalize(s)
 
 
@@ -25,27 +25,27 @@ def test_nbsp_collapses() -> None:
 
 
 def test_case_is_preserved() -> None:
-    """SLP_A_VAL and slp_a_val are different identifiers."""
-    assert normalize("SLP_A_VAL") == "SLP_A_VAL"
-    assert normalize("SLP_A_VAL") != normalize("slp_a_val")
+    """PWR_SEQ_VAL and pwr_seq_val are different identifiers."""
+    assert normalize("PWR_SEQ_VAL") == "PWR_SEQ_VAL"
+    assert normalize("PWR_SEQ_VAL") != normalize("pwr_seq_val")
 
 
 def test_technical_identifiers_survive_intact() -> None:
-    for token in ["SLP_A_VAL=0", "be=0", "F:PCH_SOC_SYNC", "0xFF", "3.1.2", "NFPA"]:
+    for token in ["PWR_SEQ_VAL=0", "be=0", "F:LINK_SYNC", "0xFF", "3.1.2", "NFPA"]:
         assert token in normalize(f"value is {token} per spec")
 
 
 def test_technical_token_extraction() -> None:
-    toks = technical_tokens("Does SLP_A_VAL=0 hold while F:PCH_SOC_SYNC is set on PCH2?")
-    assert "SLP_A_VAL=0" in toks
-    assert "F:PCH_SOC_SYNC" in toks
-    assert "PCH2" in toks
+    toks = technical_tokens("Does PWR_SEQ_VAL=0 hold while F:LINK_SYNC is set on DEV_A?")
+    assert "PWR_SEQ_VAL=0" in toks
+    assert "F:LINK_SYNC" in toks
+    assert "DEV_A" in toks
 
 
 def test_spacing_inside_identifier_is_caught() -> None:
-    """The generator writing `SLP_A_VAL = 0` when the doc says `SLP_A_VAL=0` produces a
+    """The generator writing `PWR_SEQ_VAL = 0` when the doc says `PWR_SEQ_VAL=0` produces a
     test that probes the wrong string. Triage must reject it."""
     ok, missing = tokens_present_verbatim(
-        "Is SLP_A_VAL = 0 asserted?", "The controller asserts SLP_A_VAL=0 before entry."
+        "Is PWR_SEQ_VAL = 0 asserted?", "The controller asserts PWR_SEQ_VAL=0 before entry."
     )
     assert not ok and missing

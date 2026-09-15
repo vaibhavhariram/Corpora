@@ -8,7 +8,7 @@ Why this file is load-bearing
 On the system this design is derived from, query-side and index-side text went through
 different normalization. The same token could be stored one way and looked up another.
 Real production queries returned literally nothing because of it: technical identifiers
-like `SLP_A_VAL=0`, `be=0`, and `F:PCH_SOC_SYNC`, plus Unicode dash variants, broke
+like `PWR_SEQ_VAL=0`, `be=0`, and `F:LINK_SYNC`, plus Unicode dash variants, broke
 tokenization before retrieval ever ran. The fix was described internally as "a vocabulary
 migration that may require reindexing" — i.e. changing normalization invalidates
 everything downstream.
@@ -18,7 +18,7 @@ version. That is a breaking change: bump NORMALIZER_VERSION and write an ADR.
 
 What it must NOT do
 -------------------
-- Must not lowercase. `SLP_A_VAL` and `slp_a_val` are different identifiers.
+- Must not lowercase. `PWR_SEQ_VAL` and `pwr_seq_val` are different identifiers.
 - Must not split, space, or re-case technical identifiers.
 - Must not strip punctuation that carries meaning inside identifiers (`=`, `:`, `_`, `.`).
 """
@@ -117,18 +117,31 @@ def content_hash(text: str) -> str:
 # only costs us a stricter triage check, a false negative lets a broken test into the
 # benchmark.
 # ORDER MATTERS. Regex alternation is first-match-wins at each position, so the
-# key=value form must precede the bare-identifier form. Otherwise `SLP_A_VAL=0` matches
-# as `SLP_A_VAL` and the `=0` — the part that actually carries the assertion — is lost,
+# key=value form must precede the bare-identifier form. Otherwise `PWR_SEQ_VAL=0` matches
+# as `PWR_SEQ_VAL` and the `=0` — the part that actually carries the assertion — is lost,
 # which is precisely the mismatch this function exists to catch.
+# What each alternative below matches, in order. These live out here rather than as
+# `re.VERBOSE` comments inside the pattern because anything inside the string literal is
+# part of the normalizer's hashed behavior as far as tooling can tell: editing an inline
+# comment would read as a behavioral change and demand a NORMALIZER_VERSION bump, which
+# invalidates every anchor ever captured. Out here, a wording fix is free and a change to
+# the pattern is unambiguous.
+#
+#   1. key=value and key:value  -- be=0, PWR_SEQ_VAL = 0, F:LINK_SYNC
+#   2. hex literals             -- 0xFF
+#   3. dotted versions          -- 3.1.2
+#   4. snake_case identifiers   -- PWR_SEQ_VAL, lower_case_ident
+#   5. acronym + digits         -- DEV_A2, SOC3B
+#   6. bare acronyms            -- IBC, NFPA, RRF
 _TECHNICAL_TOKEN = re.compile(
     r"""
     (?:
-        [A-Za-z_][A-Za-z0-9_]*[ ]*[=:][ ]*[^\s,;.?!]+   # be=0, SLP_A_VAL = 0, F:PCH_SOC_SYNC
-      | 0x[0-9A-Fa-f]+                                  # hex literals
-      | [0-9]+(?:\.[0-9]+){2,}                          # dotted versions / section numbers
-      | [A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+              # SNAKE_CASE_IDENTIFIER
-      | [A-Z]{2,}[0-9]+[A-Za-z0-9_]*                    # PCH2, SOC3B
-      | [A-Z]{3,}                                       # bare acronyms: IBC, NFPA, RRF
+        [A-Za-z_][A-Za-z0-9_]*[ ]*[=:][ ]*[^\s,;.?!]+
+      | 0x[0-9A-Fa-f]+
+      | [0-9]+(?:\.[0-9]+){2,}
+      | [A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+
+      | [A-Z]{2,}[0-9]+[A-Za-z0-9_]*
+      | [A-Z]{3,}
     )
     """,
     re.VERBOSE,
@@ -139,8 +152,8 @@ def technical_tokens(text: str) -> list[str]:
     """Extract tokens that must survive generation verbatim.
 
     Used by triage: every technical token appearing in a generated question must appear
-    byte-identical in the anchored span. If the generator wrote `SLP_A_VAL = 0` and the
-    document says `SLP_A_VAL=0`, the test is probing the wrong string and is rejected as
+    byte-identical in the anchored span. If the generator wrote `PWR_SEQ_VAL = 0` and the
+    document says `PWR_SEQ_VAL=0`, the test is probing the wrong string and is rejected as
     REJECT_TOKEN_MISMATCH.
     """
     return [m.group(0) for m in _TECHNICAL_TOKEN.finditer(normalize(text))]

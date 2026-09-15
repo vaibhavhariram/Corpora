@@ -110,30 +110,41 @@ One bug found by testing rather than reasoning: the change-sensitive checks orig
 before a commit was silently blind. Now diffs from the merge-base against the working tree.
 A gate that goes quiet exactly when you are still editing is a gate you learn to ignore.
 
+A second refinement, found the same way: `normalizer_versioned` was line-based, so a
+comment or docstring edit would have demanded a `NORMALIZER_VERSION` bump — invalidating
+every anchor ever captured in exchange for rewording prose. It now compares parsed ASTs with
+bare string statements stripped, so only changes that could alter normalization trip it.
+Verified in all three directions: comment-only passes, docstring-only passes, a changed dash
+mapping or regex still fails.
+
 Also landed: `.github/CODEOWNERS` (including `/scripts/` and `/.github/` — your catch),
 `pr.yml` with the reviewer gated behind `needs: invariants`, and `agent-dev.yml` with a real
 WIP cap that counts open labelled PRs rather than relying on `concurrency:`.
+
+**Scrub item 1 done (ADR-0011).** Fixture identifiers renamed to generic equivalents across
+fixtures, tests, the normalizer's prose and the docs, while it was still free. The AST
+refinement above is what made it possible to touch `normalize.py`'s docstrings without a
+spurious version bump. 39/39 still green.
 
 ## Decisions needing a strategy call
 - none outstanding. Two settled this session, both yours:
   - **ADR-0010: `doc_key` is a locator, not identity.** The docstring was wrong, not the
     code. Identity is `span_hash`; the cascade already searches other documents, so a rename
     resolves correctly today with no rename detection and no state. Unblocks the loader.
+  - **ADR-0012: the study's headline unit is calendar time**, with releases as a secondary
+    cut and commits as the raw measurement. "Your golden set has a half-life of roughly N
+    weeks" transfers to every buyer; releases are a Kubernetes artifact that most of the
+    audience does not have, and commit counts confound documentation decay with project
+    velocity. Decided before the run rather than after, for the same reason ADR-0009 fixes
+    the sampling method up front.
   - **ADR-0011: the repo publishes with the study, not before.** Pro instead of public. The
     pre-publish scrub is recorded there as a precondition so it survives the eight weeks —
     including that the fixture rename is the one item whose price goes up once branch
     protection lands.
 
 ## Open questions
-- **The fixture rename is cheaper today than later.** Renaming `SLP_A_VAL` /
-  `F:PCH_SOC_SYNC` / `PCH2` touches `tests/fixtures/mutations.py`. Right now that is a free
-  edit. Once branch protection is on it needs a `verifier-change` label and an ADR. Not
-  urgent — the repo is staying private — but it is the only scrub item with a rising price.
 - `RetirementPolicy` thresholds are unmeasured placeholders. First real output of the k8s
   study should be the distribution that replaces them.
-- The study needs a defined unit for "K revisions" — commits touching the corpus, calendar
-  time, or releases. Commits are easiest; releases are probably what a customer actually
-  experiences. Worth deciding before the run, since it shapes the headline number.
 - Four pre-existing `ruff` findings remain in scaffold files (import ordering in
   `models.py` and `test_anchors.py`, `Callable` import in `mutations.py`, `datetime.UTC`
   in `conftest.py`). Cosmetic, untouched, not worth a commit of their own.

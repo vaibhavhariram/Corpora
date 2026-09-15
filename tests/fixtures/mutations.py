@@ -33,30 +33,30 @@ This document defines the power sequencing behavior of the controller.
 
 ## 1.1 Scope
 
-Applies to products PCH2 and PCH3. Legacy product PCH1 is out of scope.
+Applies to products DEV_A and DEV_B. Legacy product DEV_C is out of scope.
 
 # 2 Sleep States
 
 ## 2.1 S3 Entry
 
-The controller asserts SLP_A_VAL=0 before transitioning to S3. The assertion window
+The controller asserts PWR_SEQ_VAL=0 before transitioning to S3. The assertion window
 is 12 milliseconds. Firmware must not issue side-band traffic during this window.
 
 ## 2.2 S3 Exit
 
-On exit the controller deasserts SLP_A_VAL=1 and waits 40 milliseconds before
+On exit the controller deasserts PWR_SEQ_VAL=1 and waits 40 milliseconds before
 resuming telemetry. See section 3.1 for the reset interaction.
 
 # 3 Reset
 
 ## 3.1 Warm Reset
 
-A warm reset preserves the F:PCH_SOC_SYNC state. The handshake timeout is 250
+A warm reset preserves the F:LINK_SYNC state. The handshake timeout is 250
 milliseconds.
 
 ## 3.2 Cold Reset
 
-A cold reset clears all state including F:PCH_SOC_SYNC.
+A cold reset clears all state including F:LINK_SYNC.
 """
 
 SPEC_B = """\
@@ -64,7 +64,7 @@ SPEC_B = """\
 
 ## 1.1 Sampling
 
-Telemetry is sampled at 100 Hz on PCH2 and 200 Hz on PCH3.
+Telemetry is sampled at 100 Hz on DEV_A and 200 Hz on DEV_B.
 
 ## 1.2 Reporting
 
@@ -79,7 +79,7 @@ CORPUS_V1: dict[str, str] = {
 # The spans tests anchor to. Each is unique in V1 unless a mutation makes it otherwise.
 SPAN_S3_ENTRY = "The assertion window\nis 12 milliseconds."
 SPAN_WARM_RESET = "The handshake timeout is 250\nmilliseconds."
-SPAN_SCOPE = "Applies to products PCH2 and PCH3."
+SPAN_SCOPE = "Applies to products DEV_A and DEV_B."
 
 
 # --------------------------------------------------------------------------- #
@@ -173,12 +173,12 @@ MUTATIONS: list[Mutation] = [
         description="the whole 3.1 section moves from spec-a into spec-b",
         apply=lambda c: {
             "spec-a.md": c["spec-a.md"].replace(
-                "## 3.1 Warm Reset\n\nA warm reset preserves the F:PCH_SOC_SYNC state. "
+                "## 3.1 Warm Reset\n\nA warm reset preserves the F:LINK_SYNC state. "
                 "The handshake timeout is 250\nmilliseconds.\n\n",
                 "",
             ),
             "spec-b.md": c["spec-b.md"]
-            + "\n## 1.3 Warm Reset\n\nA warm reset preserves the F:PCH_SOC_SYNC state. "
+            + "\n## 1.3 Warm Reset\n\nA warm reset preserves the F:LINK_SYNC state. "
             "The handshake timeout is 250\nmilliseconds.\n",
         },
         anchored_span=SPAN_WARM_RESET,
@@ -238,7 +238,7 @@ MUTATIONS: list[Mutation] = [
             c,
             "spec-a.md",
             "# 3 Reset",
-            "## 2.3 S3 Entry (duplicate)\n\nThe controller asserts SLP_A_VAL=0 before "
+            "## 2.3 S3 Entry (duplicate)\n\nThe controller asserts PWR_SEQ_VAL=0 before "
             "transitioning to S3. The assertion window\nis 12 milliseconds.\n\n# 3 Reset",
         ),
         anchored_span=SPAN_S3_ENTRY,
@@ -251,7 +251,7 @@ MUTATIONS: list[Mutation] = [
         apply=lambda c: _edit(
             c,
             "spec-a.md",
-            "The controller asserts SLP_A_VAL=0 before transitioning to S3. "
+            "The controller asserts PWR_SEQ_VAL=0 before transitioning to S3. "
             "The assertion window\nis 12 milliseconds. "
             "Firmware must not issue side-band traffic during this window.\n",
             "",

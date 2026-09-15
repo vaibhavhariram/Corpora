@@ -217,8 +217,8 @@ detail.
   trace read prefilter 0 → keyword 0 → embedding 0 → RRF 0. A five-question pilot two days
   earlier had scored recall@5 = 1.000. Nobody had filed a bug, because a plausible answer
   does not look like a failure. This is the class of bug Corpora exists to catch.
-- The failure was lexical, not semantic: technical identifiers like `SLP_A_VAL=0`, `be=0`,
-  `F:PCH_SOC_SYNC`, and Unicode dash variants broke tokenization before retrieval ever ran.
+- The failure was lexical, not semantic: technical identifiers like `PWR_SEQ_VAL=0`, `be=0`,
+  `F:LINK_SYNC`, and Unicode dash variants broke tokenization before retrieval ever ran.
   Hence invariant 3 and the verbatim-token triage rule.
 - Half the ground truth lived in spreadsheets nobody had indexed. Tables are first-class,
   ahead of PDF.
