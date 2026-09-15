@@ -21,7 +21,27 @@ Phase 1 — anchors complete, loop infrastructure landed, **corpus loader done (
   new tests.
 
 ## In progress
-- nothing. Next is `diff/` — issues #2 (set-diff) then #3 (build).
+- nothing. Next is `diff/build.py` (#3), the last item before the study.
+
+## diff set-diff (issue #2, done by hand)
+`src/corpora/diff/snapshots.py` — `diff_snapshots()` and `assert_comparable()`. 79/79 green.
+
+The set arithmetic is four lines. The guard is the part that earns its place: a normalizer
+or loader version change invalidates every anchor captured under the old version, so a diff
+across one reports **our own version bump as corpus staleness** — a confident pile of STALE
+and DESTROYED that describes nothing that happened to the customer's documents. It raises;
+there is deliberately no permissive mode, because shipping a warning there would mean
+shipping the exact failure we sell against.
+
+Loader versions are compared **per loader, where both snapshots use it**, not as whole
+dicts. Adding spreadsheets to a corpus introduces an `xlsx` entry on one side only; failing
+on that would make growing a corpus impossible while saying nothing about whether the
+Markdown anchors still hold.
+
+A rename reads as one removal plus one addition, and that is correct rather than a gap —
+`doc_key` is a locator (ADR-0010), and the anchors inside a renamed file resolve to
+VALID_RELOCATED via the cascade. The document diff is report metadata; `resolutions` carries
+the meaning.
 
 ## Corpus loader (issue #1, done by hand)
 `src/corpora/corpus/loaders/markdown.py` and `src/corpora/corpus/snapshot.py`. Snapshot
@@ -228,6 +248,12 @@ spurious version bump. 39/39 still green.
     protection lands.
 
 ## Open questions
+- **`tests/` is not linted in CI.** `pr.yml` runs `ruff check src scripts`. Writing #2's
+  tests, ruff caught `assert_comparable(...) is None` with no `assert` — a test that
+  verified nothing and passed. That is the exact class of defect this project exists to
+  catch, and CI would not have seen it. Adding `tests` to the lint step means first fixing
+  three pre-existing findings, two of which are in verifier files and so need a
+  `verifier-change` label plus an ADR. Small, deliberate, worth doing.
 - `RetirementPolicy` thresholds are unmeasured placeholders. First real output of the k8s
   study should be the distribution that replaces them.
 - Four pre-existing `ruff` findings remain in scaffold files (import ordering in
