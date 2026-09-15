@@ -4,7 +4,8 @@ Update at the end of each working session. This is the bridge to the strategy si
 short, factual, no narrative.
 
 ## Current phase
-Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then `diff/`.
+Phase 1 — anchors complete, loop infrastructure landed, **corpus loader done (issue #1)**.
+`diff/` is next: two items from the study.
 
 ## Done
 - Domain model. Now split: `Resolution` observes, `Action` decides (ADR-0008).
@@ -20,7 +21,39 @@ Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then 
   new tests.
 
 ## In progress
-- nothing. Next is the corpus loader (issue #1), then `diff/`.
+- nothing. Next is `diff/` — issues #2 (set-diff) then #3 (build).
+
+## Corpus loader (issue #1, done by hand)
+`src/corpora/corpus/loaders/markdown.py` and `src/corpora/corpus/snapshot.py`. Snapshot
+construction is no longer test code. 65/65 green, `mypy --strict` clean.
+
+**It found a bug that would have corrupted the study.** The fixture parser matched
+headings across the whole document, so a shell comment inside a fenced code block parsed
+as an H1:
+
+    # Pods              -> heading (right)
+    ```bash
+    # Create a pod      -> heading (WRONG)
+    ```
+    ## Pod lifecycle    -> path ["Create a pod", "Pod lifecycle"]  (WRONG ancestry)
+
+The invented headings are noise. The corrupted ancestry is the damage: it silently changes
+`heading_path` on a *real* heading, and `heading_path` resolution is what separates `STALE`
+from `DESTROYED`. Kubernetes docs are dense with shell and YAML blocks, so this would have
+moved the headline numbers — and no test would have caught it, because the fixture corpus
+contains no fences and all 39 tests passed either way.
+
+Found by running the parser against realistic input instead of reading it. Third time this
+project has found a defect that way, second time it was invisible to a green suite.
+
+Fixed with fence awareness (backtick and tilde, any length, indented, info strings, unclosed
+runs to EOF) and five tests. ADR-0013 records that and the rest of the loader's boundaries:
+`snapshot_id` is content not clock, undecodable bytes raise rather than substituting U+FFFD,
+dotted paths and symlinks are skipped, Setext headings are a known gap.
+
+`tests/conftest.py` now delegates to the real loader rather than reimplementing it — which
+is how `doc_key = filesystem path` survived in fixtures for weeks while `models.py` asserted
+the opposite. A fixture that reimplements the thing under test agrees with itself forever.
 
 ## Blocked
 - **One action, yours: `gh secret set ANTHROPIC_API_KEY`** (or `/install-github-app`).
@@ -114,7 +147,7 @@ of infrastructure, zero output. Acceptable now; a problem if it continues.
 
 So, a stopping rule decided in advance rather than in the moment:
 
-- **#4 produces a working CLI in one run** → the loop works. Label #1 and move.
+- **#4 produces a working CLI in one run** → the loop works. Label #2 and move.
 - **#4 takes more than one more session of debugging triggers, permissions, or payloads**
   → kill the loop and write #1, #2, #3 by hand.
 
@@ -135,8 +168,9 @@ persuasive after another session of near-misses.
   the action's documented event list, the WIP cap has never declined anything, and the
   reviewer has never gated on `needs: invariants` in a real run. The first labelled issue is
   not "build the loader" — it is "does any of this fire." #4 is small, real, off the critical
-  path, and already gated by `library_first`. Label #1 only after watching the loop work end
-  to end.
+  path, and already gated by `library_first`. Label #2 only after watching the loop work end
+  to end. **#1 was built by hand** rather than waiting on the loop, because it is first on
+  the critical path and the loop is blocked on a secret only you can set.
 
 ## Loop infrastructure (this session)
 Deterministic gate first, one reviewer for the residue. The framing correction was yours and
