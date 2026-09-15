@@ -40,7 +40,7 @@ Applies to products PCH2 and PCH3. Legacy product PCH1 is out of scope.
 ## 2.1 S3 Entry
 
 The controller asserts SLP_A_VAL=0 before transitioning to S3. The assertion window
-is 12 milliseconds. Firmware must not issue sideband traffic during this window.
+is 12 milliseconds. Firmware must not issue side-band traffic during this window.
 
 ## 2.2 S3 Exit
 
@@ -129,7 +129,7 @@ MUTATIONS: list[Mutation] = [
     Mutation(
         name="unicode_dash_swap",
         description="ASCII hyphen replaced with an en dash",
-        apply=lambda c: _edit(c, "spec-a.md", "sideband", "side\u2013band"),
+        apply=lambda c: _edit(c, "spec-a.md", "side-band", "side\u2013band"),
         anchored_span=SPAN_S3_ENTRY,
         expected=Resolution.VALID,
         note="the exact class of change that broke real production queries",
@@ -154,7 +154,7 @@ MUTATIONS: list[Mutation] = [
         apply=lambda c: _edit(
             c,
             "spec-a.md",
-            "Firmware must not issue sideband traffic during this window.",
+            "Firmware must not issue side-band traffic during this window.",
             "Sideband traffic is prohibited for the duration of the window.",
         ),
         anchored_span=SPAN_S3_ENTRY,
@@ -198,8 +198,8 @@ MUTATIONS: list[Mutation] = [
     ),
     Mutation(
         name="merge_documents",
-        description="spec-b is appended into spec-a and removed",
-        apply=lambda c: {"spec-a.md": c["spec-a.md"] + "\n" + c["spec-b.md"]},
+        description="spec-b is merged into spec-a above the anchor, and removed",
+        apply=lambda c: {"spec-a.md": c["spec-b.md"] + "\n" + c["spec-a.md"]},
         anchored_span=SPAN_S3_ENTRY,
         expected=Resolution.VALID_MOVED,
     ),
@@ -252,8 +252,8 @@ MUTATIONS: list[Mutation] = [
             c,
             "spec-a.md",
             "The controller asserts SLP_A_VAL=0 before transitioning to S3. "
-            "The assertion window\nis 12 milliseconds.\n"
-            "Firmware must not issue sideband traffic during this window.\n",
+            "The assertion window\nis 12 milliseconds. "
+            "Firmware must not issue side-band traffic during this window.\n",
             "",
         ),
         anchored_span=SPAN_S3_ENTRY,
