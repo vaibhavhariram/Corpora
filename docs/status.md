@@ -23,13 +23,13 @@ Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then 
 - nothing. Next is the corpus loader (issue #1), then `diff/`.
 
 ## Blocked
-- **Two actions only you can take**, and the loop does not run until both are done:
-  1. Upgrade to GitHub Pro. Branch protection and rulesets currently return
-     `403 Upgrade to GitHub Pro or make this repository public`, so CODEOWNERS is
-     inert until then — the file exists and enforces nothing.
-  2. `gh secret set ANTHROPIC_API_KEY` (or `/install-github-app`).
+- **One action, yours: `gh secret set ANTHROPIC_API_KEY`** (or `/install-github-app`).
+  Issue #4 is created and deliberately **not** labelled `agent:ready` — labelling it now
+  would fire a run that dies immediately on the missing key. Label it the moment the secret
+  exists; that is the first live test of the loop.
 
-  Everything else is written, tested, and committed.
+  GitHub Pro is active (the protection endpoint went 403 → 404) and branch protection is
+  applied, so CODEOWNERS now has force.
 
 ## Both strategy calls landed
 
@@ -86,6 +86,22 @@ Method constraint, recorded in CLAUDE.md and ADR-0009: **capture at commit A, re
 commit B, neither chosen for convenience.** Random or exhaustive sampling across history.
 Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
 a reader who suspects curation discounts the whole number and cannot tell from outside.
+
+## Loop state
+- **Branch protection on `main`:** required check `invariants`, code-owner review required,
+  force-push and deletion blocked, conversation resolution required.
+- `enforce_admins` is deliberately **false**. As the sole code owner you cannot approve your
+  own PR, so enforcing on admins would deadlock you on anything you open yourself. The agent
+  is not an admin and is fully blocked; for you it turns a silent merge into an explicit
+  override, which is the deliberate second action that was wanted.
+- **Labels:** `agent:ready` (input), `agent` (counts against the WIP cap), `verifier-change`.
+- **Issues:** #1 loader, #2 diff set-diff, #3 diff build, #4 cli. None labelled yet.
+- **First labelled issue is #4, not #1.** The loop is untested: `issues: [labeled]` is not in
+  the action's documented event list, the WIP cap has never declined anything, and the
+  reviewer has never gated on `needs: invariants` in a real run. The first labelled issue is
+  not "build the loader" — it is "does any of this fire." #4 is small, real, off the critical
+  path, and already gated by `library_first`. Label #1 only after watching the loop work end
+  to end.
 
 ## Loop infrastructure (this session)
 Deterministic gate first, one reviewer for the residue. The framing correction was yours and
