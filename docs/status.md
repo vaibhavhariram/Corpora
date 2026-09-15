@@ -24,6 +24,9 @@ Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then 
 
 ## Blocked
 - **One action, yours: `gh secret set ANTHROPIC_API_KEY`** (or `/install-github-app`).
+  Note the first docs PR needs `gh pr merge N --squash --admin` — its author is also its only
+  eligible reviewer, and GitHub forbids self-approval. Agent PRs are authored by the GitHub
+  App, so they can be approved normally; this only affects PRs opened under your own account.
   Issue #4 is created and deliberately **not** labelled `agent:ready` — labelling it now
   would fire a run that dies immediately on the missing key. Label it the moment the secret
   exists; that is the first live test of the loop.
@@ -86,6 +89,38 @@ Method constraint, recorded in CLAUDE.md and ADR-0009: **capture at commit A, re
 commit B, neither chosen for convenience.** Random or exhaustive sampling across history.
 Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
 a reader who suspects curation discounts the whole number and cannot tell from outside.
+
+## The critical path
+
+```
+#1 loader  ->  #2 #3 diff  ->  k8s study  ->  outreach with a real number
+```
+
+Four items. Everything else in the repo — cli, report rendering, targets, metrics,
+generation — is **off** this path and waits.
+
+The study is the only artifact that changes a stranger's behavior. The repo alone does not;
+it is a scaffold with one implemented module. "Your golden set has a half-life of N weeks,
+here is the data" does.
+
+Issue #4 (cli) is deliberately off the critical path. It exists to test the loop, not to
+advance the product.
+
+## Decision rule for the loop
+
+The gate is good and has now caught two bugs in itself, both because a negative test failed
+to fail. But **the loop has not yet written a single line of product code.** Three sessions
+of infrastructure, zero output. Acceptable now; a problem if it continues.
+
+So, a stopping rule decided in advance rather than in the moment:
+
+- **#4 produces a working CLI in one run** → the loop works. Label #1 and move.
+- **#4 takes more than one more session of debugging triggers, permissions, or payloads**
+  → kill the loop and write #1, #2, #3 by hand.
+
+`resolve()` shipped by hand in a single session. The loop is supposed to save time, not
+become the project. Write the rule down now, because the sunk-cost argument is much more
+persuasive after another session of near-misses.
 
 ## Loop state
 - **Branch protection on `main`:** required check `invariants`, code-owner review required,

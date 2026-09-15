@@ -49,6 +49,25 @@ Ranked by actual risk:
    not permission to *publish* derived material publicly under one's own name. One line, gets
    a written yes, costs nothing.
 
+## Related precondition: flip `enforce_admins` when a second reviewer exists
+
+Branch protection on `main` is applied with `enforce_admins: false`. The reasoning is sound
+today — the sole code owner cannot approve their own PR, so enforcing on admins would
+deadlock the only person able to merge anything. It surfaced immediately: the first docs PR
+had to be merged with `--admin` because its author was also its only eligible reviewer.
+
+But it means **the one human who can bypass every guardrail is the one under deadline
+pressure at 2am**, which is the precise condition under which guardrails get bypassed. The
+mitigation is not a better rule, it is a second person.
+
+**Flip `enforce_admins` to `true` the day a cofounder can review.** Recorded here rather
+than in a ticket because it is a condition, not a task — nothing will remind us, and the
+window where it matters is exactly the window where nobody is looking at process.
+
+Note this does not affect agent PRs. Those are authored by the GitHub App, so a human code
+owner can approve them normally; the bypass exists only for PRs opened under an admin's own
+account.
+
 ## What is not a reason to stay private
 The algorithm. The cascade is six rules and a hash; anyone could reimplement it from
 `docs/architecture.md`. The moat is the accumulated per-customer calibration and the
