@@ -180,15 +180,15 @@ def resolve(anchor: Anchor, snapshot: Snapshot) -> ResolutionResult:
       1. span found exactly once, same document, same position, context intact
              -> VALID
       2. span found exactly once, elsewhere in the same document
-             -> VALID_MOVED            (document edited around it; silent repair)
+             -> VALID_REPAIRED         (document edited around it; anchor updated)
       3. span found exactly once, in another document or under a different heading
-             -> VALID_RELOCATED        (section renamed/moved/split; repair + note)
+             -> VALID_RELOCATED        (section renamed/moved/split; update + note)
       4. span found in 2+ locations
              -> AMBIGUOUS              (content duplicated; flag for review)
       5. heading_path resolves to text that is no longer the span
              -> STALE                  (THE ANSWER TEXT CHANGED; flag for review)
       6. nothing resolves
-             -> DESTROYED              (retire the test)
+             -> DESTROYED              (evidence not visible in THIS snapshot)
 
     Design notes:
 
@@ -196,7 +196,7 @@ def resolve(anchor: Anchor, snapshot: Snapshot) -> ResolutionResult:
       the same offset inside edited surroundings has not been re-verified by anything;
       calling that VALID would report "nothing happened" about a document that changed.
       It is a silent repair either way, so it costs no review time to be honest and call
-      it VALID_MOVED.
+      it VALID_REPAIRED.
 
     - Rule 5 is the money case. Populate `candidate_spans` with what the text under that
       heading says NOW, so a reviewer sees the old answer (`anchor.span_text`) beside the
@@ -204,11 +204,15 @@ def resolve(anchor: Anchor, snapshot: Snapshot) -> ResolutionResult:
 
     - A heading that survives with an empty body is DESTROYED, not STALE. STALE means
       "there is new text here and a human must judge it"; with nothing left to judge,
-      the honest action is to retire the test rather than to spend review time on it.
+      there is no review to do. DESTROYED is not a retirement — see `anchors.policy`.
 
     - `context_hash` is a repair aid, never a validity signal. A context-only match
       (span changed, surroundings identical) is STALE with a suggested correction. A
       human decides whether the reworded text still answers the question.
+
+    - DESTROYED is an observation about one snapshot, never a verdict on the test. This
+      function must not be able to cause a retirement; that decision needs history and a
+      human, and lives in `anchors.policy`. See ADR-0008.
 
     - Never fall back to char_range as identity. Position is a tiebreaker for rule 1 and
       a hint for repair. Nothing else. Positional identity is the exact failure this
@@ -281,7 +285,7 @@ def resolve(anchor: Anchor, snapshot: Snapshot) -> ResolutionResult:
 
         return ResolutionResult(
             anchor=anchor,
-            resolution=Resolution.VALID_MOVED,
+            resolution=Resolution.VALID_REPAIRED,
             new_char_range=(start, end),
             new_heading_path=new_heading,
             note=(
@@ -335,8 +339,8 @@ def _resolve_missing_span(anchor: Anchor, snapshot: Snapshot) -> ResolutionResul
         anchor=anchor,
         resolution=Resolution.DESTROYED,
         note=(
-            "span, heading, and context all failed to resolve; the evidence is gone and "
-            "the test should be retired"
+            "span, heading, and context all failed to resolve in this snapshot; the test "
+            "is carried forward unchanged and the observation recorded"
         ),
     )
 

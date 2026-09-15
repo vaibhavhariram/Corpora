@@ -84,7 +84,7 @@ def test_position_is_never_identity() -> None:
 
     result = resolve(anchor, build_snapshot(m.apply(CORPUS_V1), snapshot_id="v2"))
 
-    assert result.resolution is Resolution.VALID_MOVED
+    assert result.resolution is Resolution.VALID_REPAIRED
     assert result.new_char_range is not None
     assert result.new_char_range[0] > anchor.char_range[0], "span should have shifted down"
 

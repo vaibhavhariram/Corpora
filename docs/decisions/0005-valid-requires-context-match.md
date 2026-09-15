@@ -1,6 +1,13 @@
 # ADR-0005: `VALID` requires a context match; an emptied heading is `DESTROYED`
 
-**Status:** accepted
+**Status:** accepted; naming amended by ADR-0007, open question dissolved by ADR-0008
+
+> **Note.** This ADR is kept as written, for the record. Two things have since changed:
+> the bucket it calls `VALID_MOVED` is now named `VALID_REPAIRED` (ADR-0007 — the widened
+> bucket fires when nothing moved, so the old name was false), and the "Reverses if"
+> question below about emptied headings is no longer open (ADR-0008 — `DESTROYED` no
+> longer retires anything, so the emptied-heading case costs nobody a test). The decision
+> recorded here — that `VALID` requires a context match — stands unchanged.
 
 ## Decision
 Two tie-breaks in the resolution cascade, neither of which was pinned down by

@@ -145,7 +145,7 @@ MUTATIONS: list[Mutation] = [
             "## 2.0 Preconditions\n\nAll rails must be stable.\n\n## 2.1 S3 Entry\n",
         ),
         anchored_span=SPAN_S3_ENTRY,
-        expected=Resolution.VALID_MOVED,
+        expected=Resolution.VALID_REPAIRED,
         note="THE canonical failure of positional chunk IDs; must not be STALE",
     ),
     Mutation(
@@ -158,7 +158,7 @@ MUTATIONS: list[Mutation] = [
             "Sideband traffic is prohibited for the duration of the window.",
         ),
         anchored_span=SPAN_S3_ENTRY,
-        expected=Resolution.VALID_MOVED,
+        expected=Resolution.VALID_REPAIRED,
         note="context changed, span did not; still valid",
     ),
     Mutation(
@@ -201,7 +201,7 @@ MUTATIONS: list[Mutation] = [
         description="spec-b is merged into spec-a above the anchor, and removed",
         apply=lambda c: {"spec-a.md": c["spec-b.md"] + "\n" + c["spec-a.md"]},
         anchored_span=SPAN_S3_ENTRY,
-        expected=Resolution.VALID_MOVED,
+        expected=Resolution.VALID_REPAIRED,
     ),
     # ---- MUST be flagged ----------------------------------------------------
     Mutation(

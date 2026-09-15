@@ -104,16 +104,28 @@ and *which ones broke* is the diagnostic output.
 
 Implemented in `anchors/resolve.py`. Order matters — the first matching rule wins.
 
-1. `span_hash` found exactly once, at `char_range` → `VALID`
-2. `span_hash` found exactly once, elsewhere in the same doc → `VALID_MOVED`
-3. `span_hash` found exactly once, under a different or missing `heading_path` →
-   `VALID_RELOCATED`
+1. `span_hash` found exactly once, at `char_range`, with `context_hash` intact → `VALID`
+2. `span_hash` found exactly once under the same heading, position or context changed →
+   `VALID_REPAIRED`
+3. `span_hash` found exactly once, under a different `heading_path` or in a different
+   document → `VALID_RELOCATED`
 4. `span_hash` found in 2+ locations → `AMBIGUOUS`
 5. `heading_path` resolves but `span_hash` is absent under it → `STALE`
 6. Nothing resolves → `DESTROYED`
 
 `STALE` is the product. The test still runs, still looks healthy, and its expected answer is
-now wrong. Everything else is either a silent repair or a retirement.
+now wrong. Everything else is either a silent repair or an observation to record.
+
+These six are **observations, not instructions.** `resolve()` reports what it found;
+`anchors/policy.py` decides what to do about it. The names are chosen so that each is
+literally true of every case that reaches it — rule 2 fires when a span sits at its old
+offset inside edited surroundings, so it is `VALID_REPAIRED` rather than `VALID_MOVED`,
+because nothing moved. See ADR-0007.
+
+`DESTROYED` in particular is a statement about one snapshot, not a verdict on the test. It
+never retires anything. Repair and review are cheap and reversible; retirement removes a
+test from a customer's coverage permanently and silently, so it needs a sustained run of
+`DESTROYED` observations plus a named human. See ADR-0008.
 
 `context_hash` is used for fuzzy repair when the span changed only in whitespace or
 punctuation that the normalizer did not absorb. Treat a context-only match as `STALE` with a
@@ -286,31 +298,60 @@ comment every time.
 
 ## Validation with zero customers
 
-Synthetic mutation. Author the corpus and the edits, so ground truth is free.
+Two halves, proving different things. Both are required and they are not interchangeable.
+
+### Half one — synthetic mutation (a unit test)
+
+Author the corpus and the edits, so ground truth is free.
 
 | mutation                              | correct classification |
 |---------------------------------------|------------------------|
 | no change                             | `VALID`                |
 | whitespace-only edit                  | `VALID` (normalizer absorbs) |
 | Unicode dash swapped for ASCII hyphen | `VALID` (normalizer absorbs) |
-| insert paragraph above the anchor     | `VALID_MOVED`          |
-| reword a neighboring sentence         | `VALID_MOVED`          |
+| insert paragraph above the anchor     | `VALID_REPAIRED`       |
+| reword a neighboring sentence         | `VALID_REPAIRED`       |
 | rename the heading                    | `VALID_RELOCATED`      |
 | move the section to another file      | `VALID_RELOCATED`      |
 | split one document into two           | `VALID_RELOCATED`      |
-| merge two documents                   | `VALID_MOVED`          |
+| merge two documents                   | `VALID_REPAIRED`       |
 | **reword the answer sentence**        | **`STALE`**            |
 | **change a number inside the answer** | **`STALE`**            |
 | duplicate the section                 | `AMBIGUOUS`            |
 | delete the section                    | `DESTROYED`            |
 
 This yields precision and recall *on staleness detection itself*, with no expert and no
-customer. That measurement is the pitch and, published, the credibility artifact.
+customer. It proves the cascade classifies correctly when a document changes in way X.
 
-Corpus for the public study: **Kubernetes documentation.** Markdown in Git, thousands of
-commits, real heading structure, versioned API references, heavy cross-linking, and
-structurally similar to most companies' internal docs. Two mutation sets come free —
-synthetic ones with known ground truth, and real commit history for natural churn.
+**It is not the study, and it is not the pitch.** Thirteen hand-written mutations will not
+move a stranger — we authored both the corpus and the edits, so of course we classify them
+correctly. Treat this as what it is: the unit test that has to pass before the study is
+worth running.
+
+### Half two — real churn (the study)
+
+The saleable number is **a rate**, and it can only come from history nobody authored:
+across N thousand real commits to a real corpus, what fraction of anchors went stale
+within K revisions, and what does the distribution of how-fast look like?
+
+That is the claim a stranger cares about: **your golden set has a half-life, and here it
+is.** Not "we classify mutations correctly" but "the test set you paid an expert to build
+is already N% wrong, and here is how fast it decayed."
+
+Corpus: **Kubernetes documentation.** Markdown in Git, thousands of commits, real heading
+structure, versioned API references, heavy cross-linking, and structurally similar to most
+companies' internal docs.
+
+Method constraints, both load-bearing:
+
+- **Capture anchors at commit A, resolve at commit B, with neither chosen for
+  convenience.** Sampling is random or exhaustive across history. Hand-picked commit pairs
+  produce a demo, not a measurement, and a reader who suspects curation discounts the
+  whole number.
+- **Run it before phase 3.** The study needs only corpus loader + anchors + diff + Git
+  history. No generation, no targets, no metrics, no LLM. Running it early also stress-
+  tests the cascade against churn we did not author — the only way to find the class of
+  bug that authored fixtures structurally cannot reach.
 
 Caveat: Kubernetes docs are saturated in pretraining data. The verbatim-span grounding check
 in `generate/` is not optional on a public corpus — it is what prevents a model from

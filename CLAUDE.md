@@ -53,16 +53,40 @@ identity anywhere in the evidence path.**
 6. **Library first.** All logic lives in importable functions. `cli.py` contains argument
    parsing and nothing else. If there is logic in `cli.py`, it is in the wrong file.
 
+7. **Retirement is never automatic, and never inferred from one observation.** `resolve()`
+   observes; `anchors/policy.py` decides. Repair and review may be derived from a single
+   resolution — they are cheap and reversible. Retirement is neither: it removes a test
+   from the customer's coverage permanently and tells nobody. It requires a sustained run
+   of `DESTROYED` observations over time *plus* a named human confirming. Sections get
+   emptied in one commit and refilled in the next; a model that retires on one `DESTROYED`
+   deletes coverage for a transient state. `Action.RETIRE` must stay unreachable from
+   `action_for()`.
+
 ## Build order — do not reorder
 
 Phase 1 and 2 are the differentiator and have no prior art. Phases 3–5 are commodity and
 were built elsewhere in five days. Building them first is the classic mistake.
 
+**The study runs before phase 3.** Order is: `diff/` → Kubernetes study → phase 3. The
+study needs only corpus loader + anchors + diff + real Git history — no generation, no
+targets, no metrics, no LLM. It is the shortest path from working code to the artifact
+that gets replies, and it stress-tests the cascade against churn we did not author, which
+is the only way to find the next class of bug that authored fixtures cannot reach.
+
 1. **Anchors + diff.** No LLM, no metrics, no generation. Prove that given corpus v1 and v2,
    every anchor classifies correctly. `tests/test_anchors.py` is the spec; make it pass.
-2. **Mutation harness.** Synthetic corpus + known edits + known correct classifications.
-   This is simultaneously the test suite, the validation strategy with zero customers, and
-   the artifact for the public study.
+2. **Validation, in two halves. Both are required; they prove different things.**
+   a. *Synthetic mutations.* Authored corpus + known edits + known classifications. This
+      is a **unit test**: it proves the cascade classifies correctly when a document
+      changes in way X. Necessary, and not saleable — nobody outside is moved by thirteen
+      hand-written mutations.
+   b. *Real churn — the Kubernetes study.* Capture anchors at commit A, resolve at commit
+      B, across real history at volume. This produces **the rate**: what fraction of a
+      golden set goes stale within K revisions, and how fast. That is the number a
+      stranger cares about — "your golden set has a half-life, and here it is." It is the
+      artifact that gets replies, and it cannot come from authored edits.
+      Sampling must be random or exhaustive across history. **Never hand-pick the commit
+      pairs** — curated pairs make it a demo, not a measurement.
 3. **Targets + runner + metrics.** Adapter protocol, checkpointed execution, the full metric
    set including empty-result and error counts.
 4. **Generation.** Direct LLM API call. Structured output: question, verbatim answer span,
@@ -98,14 +122,23 @@ Diff       snapshot A -> snapshot B -> affected anchors -> affected tests
 
 The output of anchor resolution *is* the staleness signal.
 
-| outcome             | condition                                | action                    |
-|---------------------|------------------------------------------|---------------------------|
-| `VALID`             | span hash hits, same location            | none                      |
-| `VALID_MOVED`       | span hash hits, position shifted         | silent repair             |
-| `VALID_RELOCATED`   | heading changed/gone, span hash hits     | repair, low-priority note |
-| `STALE`             | heading hits, span hash misses           | **flag for review**       |
-| `AMBIGUOUS`         | span hash hits in 2+ locations           | **flag for review**       |
-| `DESTROYED`         | nothing resolves                         | retire the test           |
+`resolve()` returns an **observation**. What to do about it is a separate decision, made
+by `anchors/policy.py`. Never collapse the two columns — see invariant 7 and ADR-0008.
+
+| observation (`Resolution`) | condition                            | default action (`Action`)   |
+|----------------------------|--------------------------------------|-----------------------------|
+| `VALID`                    | span hits, same place, context intact | `NONE`                     |
+| `VALID_REPAIRED`           | span hits, position or context shifted | `REPAIR` (silent)         |
+| `VALID_RELOCATED`          | span hits under a different heading or document | `REPAIR_AND_NOTE` |
+| `STALE`                    | heading hits, span misses             | `REVIEW`                   |
+| `AMBIGUOUS`                | span hits in 2+ locations             | `REVIEW`                   |
+| `DESTROYED`                | nothing resolves                      | `WATCH` — **never retire**  |
+
+Every name must be literally true of every case that reaches it. `VALID_REPAIRED` fires
+when a span sits at its old offset inside edited surroundings, so it is not called
+`VALID_MOVED` — nothing moved. The enum is customer-facing in the diff report, and a
+product that sells "we catch the small lie your green dashboard is telling" cannot ship a
+small lie in its own output. See ADR-0007.
 
 `STALE` is the money case: the test still looks runnable but its expected answer is now
 wrong. A suite full of `STALE` tests reports green while lying.

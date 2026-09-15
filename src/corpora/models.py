@@ -83,20 +83,26 @@ class Snapshot(BaseModel):
 
 
 class Resolution(str, Enum):
-    """Outcome of re-resolving an anchor against a later snapshot.
+    """What re-resolving an anchor against a later snapshot OBSERVED.
 
-    This enum IS the staleness signal. Everything else in the product is plumbing
-    around producing it correctly.
+    Observation only. A `Resolution` says what was found. It never says what to do about
+    it — repair, review, and retirement are decided by `anchors.policy`, above the
+    cascade. The split matters because the three actions are not equally reversible: a
+    repair is silent and undoable, a review costs someone ten minutes, and a retirement
+    removes a test from a customer's coverage permanently and tells nobody. Only the
+    first two may be inferred from a single observation. See ADR-0008.
     """
 
     VALID = "valid"
-    """Span found exactly once, at the recorded position. Nothing to do."""
+    """Span found exactly once, where the anchor said, with its surroundings unchanged."""
 
-    VALID_MOVED = "valid_moved"
-    """Span found exactly once, elsewhere in the same document. Silent repair."""
+    VALID_REPAIRED = "valid_repaired"
+    """Span found exactly once under the same heading in the same document, but its
+    position or its surroundings changed, so the anchor was updated to match."""
 
     VALID_RELOCATED = "valid_relocated"
-    """Span found, but under a different or missing heading path. Repair, low-priority note."""
+    """Span found exactly once under a different heading, or in a different document.
+    The anchor was updated; the address change is worth a low-priority note."""
 
     STALE = "stale"
     """Heading resolves, span does not. THE ANSWER TEXT CHANGED. The test still runs and
@@ -106,15 +112,61 @@ class Resolution(str, Enum):
     """Span found in two or more locations. Cannot decide which one the test meant."""
 
     DESTROYED = "destroyed"
-    """Nothing resolves. The evidence is gone; retire the test."""
+    """Span, heading, and context all failed to resolve.
 
+    This is a statement about one snapshot, not a verdict on the test. Sections get
+    emptied in one commit and refilled in the next; a document gets moved out of the
+    corpus and moved back. Retiring a test on one observation would delete coverage for
+    a transient state and tell nobody. Retirement requires a policy decision over
+    history — see `anchors.policy` and ADR-0008.
+    """
+
+
+class Action(str, Enum):
+    """What to DO about a `Resolution`.
+
+    Produced by `anchors.policy`, never by `resolve()`. Kept separate from `Resolution`
+    so that a change in policy — how patient we are before proposing retirement, say —
+    cannot be mistaken for a change in what the cascade observed.
+    """
+
+    NONE = "none"
+    """Nothing to do. Nothing changed around this anchor."""
+
+    REPAIR = "repair"
+    """Update the anchor to its new position or context. Silent; costs no review time."""
+
+    REPAIR_AND_NOTE = "repair_and_note"
+    """Update the anchor and surface a low-priority note that its address changed."""
+
+    REVIEW = "review"
+    """A human must judge this before the next run is a valid measurement."""
+
+    WATCH = "watch"
+    """Evidence was not visible in this snapshot. Record the observation and carry the
+    test forward UNCHANGED. Repeated observations may eventually make it a retirement
+    candidate; one never does."""
+
+    RETIRE = "retire"
+    """Remove the test from the benchmark. Destructive, unrecoverable, and invisible to
+    the customer once done. Never derived from a single `Resolution` — it requires a
+    retirement policy evaluated over history plus explicit human confirmation.
+    See `anchors.policy.may_retire`."""
+
+
+SPAN_FOUND: frozenset[Resolution] = frozenset(
+    {Resolution.VALID, Resolution.VALID_REPAIRED, Resolution.VALID_RELOCATED}
+)
+"""Observation: the anchored text still exists and was located exactly once."""
 
 NEEDS_REVIEW: frozenset[Resolution] = frozenset(
     {Resolution.STALE, Resolution.AMBIGUOUS}
 )
-AUTO_REPAIRABLE: frozenset[Resolution] = frozenset(
-    {Resolution.VALID, Resolution.VALID_MOVED, Resolution.VALID_RELOCATED}
-)
+"""Resolutions that block a valid measurement until a human judges them.
+
+DESTROYED is deliberately absent. It is not a review item and it is not a retirement:
+it goes on a watchlist and accrues history. See `anchors.policy`.
+"""
 
 
 class Anchor(BaseModel):
@@ -424,18 +476,27 @@ class Diff(BaseModel):
 
     @property
     def needs_review(self) -> list[ResolutionResult]:
+        """Anchors a human must judge before the next run is a valid measurement."""
         return [r for r in self.resolutions if r.resolution in NEEDS_REVIEW]
 
     @property
-    def auto_repaired(self) -> list[ResolutionResult]:
+    def repaired(self) -> list[ResolutionResult]:
+        """Anchors that were found and updated without costing anyone review time."""
         return [
             r
             for r in self.resolutions
-            if r.resolution in AUTO_REPAIRABLE and r.resolution != Resolution.VALID
+            if r.resolution in SPAN_FOUND and r.resolution is not Resolution.VALID
         ]
 
     @property
-    def destroyed(self) -> list[ResolutionResult]:
+    def unresolved(self) -> list[ResolutionResult]:
+        """Anchors whose evidence was not visible in this snapshot.
+
+        NOT a retirement list, and deliberately not named like one. A single diff cannot
+        justify retiring a test — the section may be refilled in the next commit. These
+        go on a watchlist; `anchors.policy` decides over history whether any of them is
+        a retirement candidate, and a human confirms. See ADR-0008.
+        """
         return [r for r in self.resolutions if r.resolution is Resolution.DESTROYED]
 
 
