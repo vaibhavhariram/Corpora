@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- corpora project-specific ---
+# never commit generated caches or model output — a PR was closed on the prior project
+# for exactly this
+.corpora/
+snapshots/
+runs/
+reports/
+*.checkpoint.json
