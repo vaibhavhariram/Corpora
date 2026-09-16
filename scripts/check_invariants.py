@@ -101,6 +101,23 @@ MODEL_ALLOWED_PACKAGES = ("generate",)
 
 VERIFIER_FILES = ("tests/test_anchors.py", "tests/fixtures/mutations.py")
 
+# --------------------------------------------------------------------------- #
+# Study firewall — a feasibility check must not be able to peek at the outcome
+# --------------------------------------------------------------------------- #
+
+FEASIBILITY_SCRIPT = "scripts/study_feasibility.py"
+FEASIBILITY_FORBIDDEN = ("anchors", "diff")
+"""Subpackages the pre-study feasibility check may not reach.
+
+Confirming the design can detect an effect is legitimate; looking at the effect is not —
+the same line a power analysis draws before a trial. Peeking would make the
+pre-registration worthless, and a pre-registration is the only evidence of non-curation
+that survives a sceptical reader.
+
+Enforced here rather than in a docstring because "computed and then discarded" is not a
+guarantee. The code path must not exist.
+"""
+
 
 def _py_files(root: Path) -> list[Path]:
     if not root.exists():
@@ -327,6 +344,37 @@ def check_verifier_protected(base: str | None) -> list[str]:
     return [message]
 
 
+def check_study_firewall() -> list[str]:
+    """The feasibility check may not resolve anchors. See docs/study-protocol.md 8c."""
+    script = ROOT / FEASIBILITY_SCRIPT
+    if not script.exists():
+        return []
+
+    reached = set()
+    tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
+    for node in ast.walk(tree):
+        names = []
+        if isinstance(node, ast.Import):
+            names = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        for name in names:
+            parts = name.split(".")
+            if parts[0] == "corpora" and len(parts) > 1:
+                reached.add(parts[1])
+
+    hits = sorted(reached.intersection(FEASIBILITY_FORBIDDEN))
+    return [
+        (
+            f"{FEASIBILITY_SCRIPT} imports corpora.{hit} — the pre-study feasibility check "
+            f"may confirm the design can detect an effect, never look at the effect. "
+            f"Resolving anchors before the run makes the pre-registration worthless. "
+            f"See docs/study-protocol.md section 8c."
+        )
+        for hit in hits
+    ]
+
+
 def check_library_first() -> list[str]:
     """Invariant 6. If there is logic in cli.py, it is in the wrong file."""
     cli = SRC / "cli.py"
@@ -430,6 +478,7 @@ def main() -> int:
         ("dependency_allowlist", check_dependency_allowlist()),
         ("normalizer_versioned", check_normalizer_versioned(base)),
         ("verifier_protected", check_verifier_protected(base)),
+        ("study_firewall", check_study_firewall()),
         ("library_first", check_library_first()),
         ("no_orphan_modules", check_no_orphan_modules()),
     ]
