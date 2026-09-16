@@ -154,6 +154,45 @@ commit B, neither chosen for convenience.** Random or exhaustive sampling across
 Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
 a reader who suspects curation discounts the whole number and cannot tell from outside.
 
+## diff build (issue #3, done by hand)
+`src/corpora/diff/build.py`. 92/92 green. Three traps, each of which ships a wrong number
+rather than an error:
+
+1. **No pre-filtering to `changed_docs`.** An anchor in an *unchanged* document whose span
+   was duplicated into a changed one must still be `AMBIGUOUS`. Filtering by `doc_key`
+   never looks at it and reports `VALID` — silently, toward a false green.
+2. **Per-anchor isolation, narrow on purpose.** `ValueError` only. A bare `except Exception`
+   would turn every future defect in `resolve()` into a silently shrinking denominator.
+3. **`Diff.unresolvable`, separate from `resolutions`.** Your addition, and the one that
+   would have shipped a wrong number. An anchor captured under an older
+   `NORMALIZER_VERSION` is a fact about our tooling, not the customer's documents — not
+   `DESTROYED`, not `STALE`, never in a denominator. Given a different *shape* from
+   `resolutions` rather than a seventh enum case, so the two cannot be pooled by accident.
+
+## Fourth false-green, found this session
+PR #6's `review` job reported **pass in 9 seconds having done nothing.** Two independent
+skip paths, both green:
+
+- `anthropic_api_key: ""` — secret unset
+- `Skipping action due to workflow validation: the workflow file must have identical
+  content to the version on the default branch`
+
+The second is the dangerous one. The action refuses to run whenever `pr.yml` differs from
+`main` — a deliberate protection against a PR rewriting the workflow that reviews it.
+Correct of the action. Dangerous of us: **any PR editing `pr.yml` silently disables the
+reviewer for itself and still shows green.** `CODEOWNERS` guarantees a human looks at the
+change; it does nothing about the reviewer quietly not running, and the green tick actively
+argues that it did.
+
+Now fails loudly with the reason in the annotation. Verified: `review` is red on PR #6 and
+says why.
+
+That is four self-directed defects, all the same shape — **a check that failed to fail.**
+The line-based normalizer check that went quiet on uncommitted work. The negative test that
+passed when it should have failed. The test that asserted nothing. The reviewer that
+reported green having skipped. Worth a line in the study writeup: the discipline that finds
+these is the same one we are selling.
+
 ## The critical path
 
 ```
