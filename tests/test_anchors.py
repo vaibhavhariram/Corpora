@@ -12,14 +12,13 @@ import pytest
 from corpora.anchors.resolve import capture, resolve
 from corpora.models import NEEDS_REVIEW, Resolution
 
+from .conftest import build_snapshot
 from .fixtures.mutations import (
     CORPUS_V1,
     MUTATIONS,
     MUTATIONS_BY_NAME,
     SPAN_S3_ENTRY,
 )
-from .conftest import build_snapshot
-
 
 # --------------------------------------------------------------------------- #
 # The mutation table

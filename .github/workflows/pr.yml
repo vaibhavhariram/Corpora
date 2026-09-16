@@ -48,7 +48,13 @@ jobs:
         run: mypy
 
       - name: Lint
-        run: ruff check src scripts
+        # `tests` is in here deliberately. Ruff caught `assert_comparable(...) is None`
+        # with no `assert` — a test that verified nothing and passed green. That is a
+        # false-green verifier in the directory that holds the verifier, and the invariant
+        # gate cannot see it: `verifier_protected` stops the mutation table being MODIFIED,
+        # nothing stops it being DEGRADED. A row that silently stops asserting is exactly
+        # as bad as a row deleted, and only one of those was caught. See ADR-0014.
+        run: ruff check src scripts tests
 
   review:
     name: review
@@ -65,6 +71,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # The reviewer either reviews, or says out loud that it did not. It must never
+      # report green having skipped, because a green check trains the one human reviewer
+      # to believe a review happened. Both skip paths below were observed on PR #6:
+      # the job passed in 9 seconds having done nothing at all.
+      - name: Reviewer preconditions
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          fail=0
+          if [ -z "$KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set. The reviewer cannot run, and a green 'review' check would mean nothing. Set the secret or review this PR by hand."
+            fail=1
+          fi
+          if ! git diff --quiet "origin/${{ github.base_ref }}" -- .github/workflows/pr.yml; then
+            echo "::error::This PR modifies .github/workflows/pr.yml. claude-code-action refuses to run whenever the workflow file differs from the default branch — a deliberate protection against a PR rewriting the workflow that reviews it — so the reviewer WILL be skipped. That is correct of the action and dangerous of us: review this PR by hand."
+            fail=1
+          fi
+          exit $fail
 
       - uses: anthropics/claude-code-action@v1
         with:

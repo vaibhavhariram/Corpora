@@ -17,8 +17,8 @@ Those are the shapes that broke retrieval on the system this design comes from.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from corpora.models import Resolution
 

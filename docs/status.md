@@ -3,9 +3,20 @@
 Update at the end of each working session. This is the bridge to the strategy side —
 short, factual, no narrative.
 
+## Loop: parked
+The stopping rule is answered. #1 and #2 were written by hand in one session, both green;
+the loop produced zero lines and never executed. Finish #3 and the study by hand.
+
+The infrastructure stays committed and dormant. `make invariants` runs regardless and has
+earned its place three times over — it is not the part that was speculative. The agent loop
+specifically solves a throughput problem that does not exist here: one serial critical path,
+one reviewer. Revisit when there is a cofounder, or when the work is genuinely parallel.
+
+Issue #4 (cli) stays open and unlabelled.
+
 ## Current phase
-Phase 1 — anchors complete, loop infrastructure landed, **corpus loader done (issue #1)**.
-`diff/` is next: two items from the study.
+Phase 1 complete: anchors, policy, corpus loader (#1), `diff/` (#2, #3). **The study is
+next** — nothing else stands between here and it.
 
 ## Done
 - Domain model. Now split: `Resolution` observes, `Action` decides (ADR-0008).
@@ -142,6 +153,90 @@ Method constraint, recorded in CLAUDE.md and ADR-0009: **capture at commit A, re
 commit B, neither chosen for convenience.** Random or exhaustive sampling across history.
 Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
 a reader who suspects curation discounts the whole number and cannot tell from outside.
+
+## diff build (issue #3, done by hand)
+`src/corpora/diff/build.py`. 92/92 green. Three traps, each of which ships a wrong number
+rather than an error:
+
+1. **No pre-filtering to `changed_docs`.** An anchor in an *unchanged* document whose span
+   was duplicated into a changed one must still be `AMBIGUOUS`. Filtering by `doc_key`
+   never looks at it and reports `VALID` — silently, toward a false green.
+2. **Per-anchor isolation, narrow on purpose.** `ValueError` only. A bare `except Exception`
+   would turn every future defect in `resolve()` into a silently shrinking denominator.
+3. **`Diff.unresolvable`, separate from `resolutions`.** Your addition, and the one that
+   would have shipped a wrong number. An anchor captured under an older
+   `NORMALIZER_VERSION` is a fact about our tooling, not the customer's documents — not
+   `DESTROYED`, not `STALE`, never in a denominator. Given a different *shape* from
+   `resolutions` rather than a seventh enum case, so the two cannot be pooled by accident.
+
+## Adversarial review of `diff/build.py`
+Five independent lenses (traps, denominators, cascade interaction, the compatibility guard,
+fitness for the study), each finding then handed to a refute-by-default verifier.
+**13 candidates, 12 refuted, 1 confirmed** — and it was not in `build.py`. It was in the
+loader written one commit earlier.
+
+**The heading regex used `\s`, which matches newlines.** On a hashes-only line — `#` alone
+is valid CommonMark, and `normalize()` strips a trailing space so `"# "` arrives as `"#"` —
+`\s+` ate the newline and `(.+)$` captured the *next* line as the title. A real heading
+there vanished, its hashes ended up inside a phantom level-1 title, and every heading below
+inherited the phantom as root ancestor. One stray line corrupts `heading_path` for the rest
+of the document.
+
+Verified end to end rather than argued: stray `#` in both snapshots, answer reworded —
+`DESTROYED`/`needs_review=0` before, `STALE`/`needs_review=1` after. The money case was
+being routed to `WATCH`. Fixed in ADR-0015, `MARKDOWN_LOADER_VERSION` → 1.1.0, 97 green.
+
+Two things worth keeping from how it went:
+
+- **The verifier corrected half the reviewer's claim.** The reviewer said an untouched
+  document would report `VALID_RELOCATED`; the right answer is `VALID_REPAIRED`, since
+  deleting the line shifts the offset. "The review found something" and "the review was
+  right about everything it found" are different claims. Only the first is true.
+- **My first regression test conflated two defects** and kept failing after the fix was
+  already correct. Isolating them surfaced issue #7 — a separate, pre-existing cascade
+  limitation. Worth noting that a test which fails for the wrong reason is how the second
+  bug got found.
+
+## Issue #7 — needs a strategy call before the study
+An ancestor heading renamed *and* the answer reworded in the same commit reports
+`DESTROYED`, not `STALE`. No empty heading involved. `_heading_span` requires exact
+full-ancestry equality, so a renamed grandparent makes every descendant a miss.
+
+It is **spec-conformant** — rule 5 requires the heading path to resolve and it genuinely
+does not — so changing it means changing the cascade's semantics. That is a CLAUDE.md-level
+decision and explicitly on the do-not-loop list, so it is filed rather than patched. Three
+options sketched in the issue; option 1 (document the bias, report it in the study's
+methodology) is the safe default.
+
+**Its bias understates our own headline staleness rate.** Real documentation gets sections
+re-parented and reworded in the same commit routinely, and every such case is a `STALE` that
+reports as `DESTROYED`. That is the one direction of error that wanting an impressive number
+would never catch, which is a reason to decide it deliberately rather than let the default
+ride.
+
+## Fourth false-green, found this session
+PR #6's `review` job reported **pass in 9 seconds having done nothing.** Two independent
+skip paths, both green:
+
+- `anthropic_api_key: ""` — secret unset
+- `Skipping action due to workflow validation: the workflow file must have identical
+  content to the version on the default branch`
+
+The second is the dangerous one. The action refuses to run whenever `pr.yml` differs from
+`main` — a deliberate protection against a PR rewriting the workflow that reviews it.
+Correct of the action. Dangerous of us: **any PR editing `pr.yml` silently disables the
+reviewer for itself and still shows green.** `CODEOWNERS` guarantees a human looks at the
+change; it does nothing about the reviewer quietly not running, and the green tick actively
+argues that it did.
+
+Now fails loudly with the reason in the annotation. Verified: `review` is red on PR #6 and
+says why.
+
+That is four self-directed defects, all the same shape — **a check that failed to fail.**
+The line-based normalizer check that went quiet on uncommitted work. The negative test that
+passed when it should have failed. The test that asserted nothing. The reviewer that
+reported green having skipped. Worth a line in the study writeup: the discipline that finds
+these is the same one we are selling.
 
 ## The critical path
 

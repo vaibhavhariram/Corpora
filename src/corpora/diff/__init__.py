@@ -1,5 +1,6 @@
 """Snapshot A -> snapshot B -> affected anchors -> affected tests."""
 
+from .build import build_diff
 from .snapshots import (
     DocumentChanges,
     IncompatibleSnapshots,
@@ -11,5 +12,6 @@ __all__ = [
     "DocumentChanges",
     "IncompatibleSnapshots",
     "assert_comparable",
+    "build_diff",
     "diff_snapshots",
 ]

@@ -151,6 +151,80 @@ def test_a_fenced_block_stays_inside_its_headings_body() -> None:
     assert "# not a heading" in text[span.start : span.end]
 
 
+def test_an_empty_heading_does_not_swallow_the_next_one() -> None:
+    """An empty ATX heading is valid CommonMark, and `#` alone used to eat the next line.
+
+    `\\s` matches newlines. On a hashes-only line, `\\s+` consumed the blank line and
+    `(.+)$` captured the FOLLOWING line as the title — so a real heading there vanished
+    from the output, its own `#` markers ended up inside a phantom title, and every
+    heading below inherited the phantom as root ancestor.
+
+    Same damage class as the fenced-code bug (ADR-0013) arriving by a different door, and
+    invisible for the same reason: the fixture corpus contains no empty headings.
+    """
+    text = normalize("# Pods\n\n#\n\n## Lifecycle\n\n### Termination\n\n## Networking\n\nprose\n")
+    assert [(s.level, s.path) for s in parse_headings(text)] == [
+        (1, ["Pods"]),
+        (1, [""]),
+        (2, ["", "Lifecycle"]),
+        (3, ["", "Lifecycle", "Termination"]),
+        (2, ["", "Networking"]),
+    ]
+
+
+def test_an_empty_heading_has_an_empty_title() -> None:
+    """Faithful to CommonMark: `#` is a heading whose content is empty. It still ends the
+    previous section, so dropping it would merge its body into the heading above."""
+    spans = parse_headings(normalize("# A\n\nbody\n\n##\n\nmore\n"))
+    assert [(s.level, s.path) for s in spans] == [(1, ["A"]), (2, ["A", ""])]
+
+
+def test_a_hash_without_a_space_is_not_a_heading() -> None:
+    """Preserved behaviour: CommonMark requires whitespace after the hashes."""
+    assert parse_headings(normalize("#hashtag\n\nprose\n")) == []
+
+
+def test_a_trailing_space_only_heading_is_still_empty() -> None:
+    """normalize() strips trailing whitespace, so `# ` reaches the parser as `#`."""
+    spans = parse_headings(normalize("# \n\nbody\n"))
+    assert [(s.level, s.path) for s in spans] == [(1, [""])]
+
+
+def test_an_empty_heading_does_not_flip_stale_to_destroyed() -> None:
+    """The end-to-end consequence, which is the only reason the parser bug mattered.
+
+    The swallowed heading corrupted `heading_path` at capture time, so `_heading_span`
+    missed in the new snapshot and a reworded answer fell through to DESTROYED with
+    needs_review == 0 — the money case routed to WATCH, invisible to the reviewer, and
+    STALE vs DESTROYED is exactly what the study reads its headline off.
+
+    The stray `#` is present in BOTH snapshots here, isolating the parser bug from the
+    separate cascade limitation tracked in issue #7 (an ancestor heading renamed *and* the
+    answer reworded in the same commit still yields DESTROYED, empty headings or not).
+    """
+    from datetime import UTC, datetime
+
+    from corpora.anchors.resolve import capture
+    from corpora.diff.build import build_diff
+    from corpora.models import Resolution
+
+    from .conftest import build_snapshot
+
+    span = "The default grace period is 30 seconds."
+    stray = "## Overview\n\nprose\n\n#\n\n## Termination\n\n"
+    v1 = build_snapshot({"p.md": f"{stray}{span}\n"}, "v1")
+    anchor = capture(v1.documents["p.md"], span, "v1")
+    assert anchor.heading_path == ["", "Termination"], "the empty heading is a real ancestor"
+
+    after = {"p.md": f"{stray}The default grace period is 45 seconds.\n"}
+    diff = build_diff(
+        v1, build_snapshot(after, "v2"), [anchor],
+        computed_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    assert diff.resolutions[0].resolution is Resolution.STALE
+    assert len(diff.needs_review) == 1
+
+
 def test_offsets_are_into_normalized_text() -> None:
     """Normalization runs first, so offsets index the normalized string.
 
