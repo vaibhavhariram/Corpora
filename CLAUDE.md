@@ -207,6 +207,15 @@ disables every guardrail in one PR, which is reward hacking one level up from ed
 
 Rule of thumb: **if you cannot state the test that proves it right, it is not loopable yet.**
 
+## The bridge
+
+`docs/status.md` is the bridge to the strategy side: current state, the number, what is next.
+Ninety seconds, no diff required. Update it at the end of every session and keep it short —
+it drifted to twenty-two sections before being split, which is the failure it exists to
+prevent.
+
+`docs/journal.md` holds the accumulated history. Nothing is pruned there.
+
 ## Decision records
 
 Any non-obvious choice gets a short ADR in `docs/decisions/NNNN-title.md`: what was decided,

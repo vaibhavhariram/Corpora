@@ -43,7 +43,7 @@ Ranked by actual risk:
 2. **"29 of 59 real queries returned literally nothing"** and the pilot recall figures in
    CLAUDE.md. A named-adjacent company's internal quality failure, attributable in one click.
    Keep the lesson, delete the numbers.
-3. **The named colleague with commercial intent attached**, `docs/status.md`. Remove.
+3. **The named colleague with commercial intent attached**, `docs/journal.md`. Remove.
 4. **"a semiconductor company"** → "a prior enterprise deployment".
 5. **One email** to the former manager. Verbal permission to *use* internal documentation is
    not permission to *publish* derived material publicly under one's own name. One line, gets
