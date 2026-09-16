@@ -53,14 +53,22 @@ from corpora.corpus.normalize import normalize, technical_tokens
 # --------------------------------------------------------------------------- #
 
 CORPUS_PATH = "content/en/docs"
-COHORTS = 24
 DOCS_PER_COHORT = 50
 MIN_SPAN = 40
 MAX_SPAN = 400
 OFFSETS_DAYS = (7, 14, 30, 60, 90, 180, 365)
 WINDOW_START = "2021-01-01"
 TRAILING_GAP_DAYS = 180
-SEED = 20260916
+SEED = 20260917
+"""Seed for the quarter-stratified draw (ADR-0017).
+
+The superseded commit-uniform draw used 20260916. Its results are known to the author, so
+reusing it under a new frame would be a degree of freedom with no benefit. Both seeds are
+recorded; see docs/study/feasibility-commit-uniform.txt for the superseded output.
+"""
+
+CHURN_WINDOW_DAYS = 90
+"""Trailing window over which each cohort's churn covariate is counted."""
 
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
@@ -132,6 +140,45 @@ def eligible_spans(raw: str) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
+def quarter_of(when: datetime) -> str:
+    return f"{when.year}Q{(when.month - 1) // 3 + 1}"
+
+
+def stratify_by_quarter(
+    population: list[tuple[str, datetime]], rng: random.Random
+) -> list[tuple[str, datetime]]:
+    """One cohort start per calendar quarter, drawn uniformly within the quarter.
+
+    ADR-0017. The headline is a calendar-time half-life, so the sampling frame is calendar
+    time. Drawing uniformly over commits instead weights cohorts by churn, and editing
+    activity on this corpus fell roughly 2x between 2022 and 2025 — which over-represents
+    the high-churn era and biases the headline toward more staleness.
+    """
+    buckets: dict[str, list[tuple[str, datetime]]] = {}
+    for sha, when in population:
+        buckets.setdefault(quarter_of(when), []).append((sha, when))
+    return [rng.choice(buckets[q]) for q in sorted(buckets)]
+
+
+def churn_before(repo: Path, when: datetime) -> int:
+    """Commits touching the corpus in the trailing window before a cohort start.
+
+    A covariate, not a confound — once the frame is calendar-uniform, "anchors captured in
+    high-churn periods decay faster" becomes a finding the study can report.
+
+    Counted against FULL history rather than the windowed population. Counting against the
+    population truncates the trailing window for cohorts near WINDOW_START and reported 24
+    commits for 2021Q1 where its neighbours had ~500 — an artifact of the window edge, not
+    a quiet quarter.
+    """
+    lo = (when - timedelta(days=CHURN_WINDOW_DAYS)).date().isoformat()
+    out = git(
+        repo, "log", "--format=%H", f"--since={lo}",
+        f"--until={when.date().isoformat()}", "--", CORPUS_PATH,
+    )
+    return len([ln for ln in out.splitlines() if ln.strip()])
+
+
 def git(repo: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), *args], capture_output=True, text=True, check=True
@@ -198,7 +245,6 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--repo", required=True, type=Path)
     ap.add_argument("--json", type=Path)
-    ap.add_argument("--cohorts", type=int, default=COHORTS)
     ap.add_argument("--docs-per-cohort", type=int, default=DOCS_PER_COHORT)
     args = ap.parse_args()
 
@@ -217,8 +263,7 @@ def main() -> int:
         return 1
 
     rng = random.Random(SEED)
-    starts = rng.sample(population, min(args.cohorts, len(population)))
-    starts.sort(key=lambda c: c[1])
+    starts = stratify_by_quarter(population, rng)
 
     per_cohort: list[dict[str, Any]] = []
     strata: dict[str, int] = {"numeric": 0, "identifier": 0, "prose": 0}
@@ -226,11 +271,14 @@ def main() -> int:
     realised_n = 0
     sentences_per_doc: list[int] = []
 
-    print(f"\ncohorts           {len(starts)} (seed {SEED})")
-    print(f"{'start date':<12} {'eligible docs':>13} {'sampled':>8} {'anchors':>8} {'horizons':>9}")
-    print("-" * 56)
+    quarters = sorted({quarter_of(w) for _, w in population})
+    print(f"eligible quarters {len(quarters)}  ({quarters[0]} .. {quarters[-1]})")
+    print(f"\ncohorts           {len(starts)}, one per quarter (seed {SEED})")
+    print(f"{'quarter':<9} {'start date':<12} {'churn':>6} {'anchors':>8} {'horizons':>9}")
+    print("-" * 50)
 
     for sha, when in starts:
+        churn = churn_before(args.repo, when)
         all_docs = docs_at(args.repo, sha)
         sampled = rng.sample(all_docs, min(args.docs_per_cohort * 3, len(all_docs)))
 
@@ -258,13 +306,14 @@ def main() -> int:
 
         per_cohort.append({
             "sha": sha, "date": when.date().isoformat(),
+            "quarter": quarter_of(when), "churn_90d": churn,
             "eligible_docs_in_sample": eligible_docs, "anchors": anchors_here,
             "horizons_observable": reachable,
         })
-        print(f"{when.date()!s:<12} {eligible_docs:>13} {len(sampled):>8} "
+        print(f"{quarter_of(when):<9} {when.date()!s:<12} {churn:>6} "
               f"{anchors_here:>8} {len(reachable):>9}")
 
-    print(f"\nrealised N        {realised_n}  (target {args.cohorts * args.docs_per_cohort})")
+    print(f"\nrealised N        {realised_n}  (target {len(starts) * args.docs_per_cohort})")
     if sentences_per_doc:
         ordered = sorted(sentences_per_doc)
         print(f"eligible spans/doc  median {ordered[len(ordered) // 2]}  "
@@ -289,7 +338,8 @@ def main() -> int:
             "seed": SEED,
             "population_commits": len(population),
             "realised_n": realised_n,
-            "target_n": args.cohorts * args.docs_per_cohort,
+            "target_n": len(starts) * args.docs_per_cohort,
+            "frame": "quarter-stratified",
             "horizon_observable": {str(k): v for k, v in horizon_observable.items()},
             "strata": strata,
             "cohorts": per_cohort,

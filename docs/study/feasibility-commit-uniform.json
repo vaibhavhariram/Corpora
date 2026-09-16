@@ -2,31 +2,28 @@
   "generated_from": "scripts/study_feasibility.py",
   "corpus_head": "f8a07233bebaa702ebf5a647d0664e19b42f1597",
   "analysis_date": "2026-09-16T06:21:20+00:00",
-  "seed": 20260917,
+  "seed": 20260916,
   "population_commits": 10611,
-  "realised_n": 1050,
-  "target_n": 1050,
-  "frame": "quarter-stratified",
+  "realised_n": 1200,
+  "target_n": 1200,
   "horizon_observable": {
-    "7": 1050,
-    "14": 1050,
-    "30": 1050,
-    "60": 1050,
-    "90": 1050,
-    "180": 1050,
-    "365": 900
+    "7": 1200,
+    "14": 1200,
+    "30": 1200,
+    "60": 1200,
+    "90": 1200,
+    "180": 1200,
+    "365": 1150
   },
   "strata": {
-    "numeric": 194,
-    "identifier": 253,
-    "prose": 603
+    "numeric": 248,
+    "identifier": 327,
+    "prose": 625
   },
   "cohorts": [
     {
-      "sha": "f5b9d5dafe7eabec003a854edb97d4b3cf751c15",
-      "date": "2021-01-06",
-      "quarter": "2021Q1",
-      "churn_90d": 606,
+      "sha": "c6f6fb9a3ee274418e457b88640096089e557cea",
+      "date": "2021-01-12",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -40,10 +37,8 @@
       ]
     },
     {
-      "sha": "69c9e63e9f7cba72c0ac1984363a92a53a1e7fda",
-      "date": "2021-06-18",
-      "quarter": "2021Q2",
-      "churn_90d": 518,
+      "sha": "e30a9bb3d993d6247c0b352bd3d0c44e4d9d812e",
+      "date": "2021-01-26",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -57,10 +52,8 @@
       ]
     },
     {
-      "sha": "d078b427b89f32e12a81078fe4e1a3b946446c9c",
-      "date": "2021-07-26",
-      "quarter": "2021Q3",
-      "churn_90d": 511,
+      "sha": "16fcbcba6905b34c00f96ca596b89f594fec24a9",
+      "date": "2021-03-26",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -74,10 +67,8 @@
       ]
     },
     {
-      "sha": "97495989fcccf6427a2fb6939f5ed2293e941aeb",
-      "date": "2021-11-21",
-      "quarter": "2021Q4",
-      "churn_90d": 437,
+      "sha": "a38531234fd4c27cdf6c9890783bf50e43a8d0aa",
+      "date": "2021-04-15",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -91,10 +82,8 @@
       ]
     },
     {
-      "sha": "edbbc58103451d791818451f13ff283627bf7c39",
-      "date": "2022-01-19",
-      "quarter": "2022Q1",
-      "churn_90d": 584,
+      "sha": "7af03687a0f4afb9b95c69f2157ec157493ec2ce",
+      "date": "2021-05-29",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -108,10 +97,8 @@
       ]
     },
     {
-      "sha": "1a2467dc4d335fb401d097595ecf62edef8d6a5d",
-      "date": "2022-05-29",
-      "quarter": "2022Q2",
-      "churn_90d": 689,
+      "sha": "36df19e1d508609ffe68aa3937c3a3201e242587",
+      "date": "2021-07-15",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -125,10 +112,8 @@
       ]
     },
     {
-      "sha": "d772e76af999fc224dd102ad88f20f0a40561ae7",
-      "date": "2022-09-30",
-      "quarter": "2022Q3",
-      "churn_90d": 669,
+      "sha": "02ef0100151071db48ab584d3e83c1c4920ca356",
+      "date": "2021-08-01",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -142,10 +127,8 @@
       ]
     },
     {
-      "sha": "0b79c2ba126beae45d56df0ae0cd04987654bff2",
-      "date": "2022-12-05",
-      "quarter": "2022Q4",
-      "churn_90d": 679,
+      "sha": "4ecb2fda5beb716232c91dc4d0d13ab10623ff3d",
+      "date": "2021-10-22",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -159,10 +142,8 @@
       ]
     },
     {
-      "sha": "4d3c9a6fbd3e2ecb0a554e2c8df5f5617bcd9bc6",
-      "date": "2023-02-07",
-      "quarter": "2023Q1",
-      "churn_90d": 597,
+      "sha": "dfbb64991fae8ab2e1fe8651e677080b8231bd2c",
+      "date": "2021-11-06",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -176,10 +157,8 @@
       ]
     },
     {
-      "sha": "c0665e478998c7a8580d574af4ff71c19a0df3d6",
-      "date": "2023-05-09",
-      "quarter": "2023Q2",
-      "churn_90d": 577,
+      "sha": "d677a0eed5e2405ee4ebe8f8211689a25c76d799",
+      "date": "2022-01-21",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -193,10 +172,8 @@
       ]
     },
     {
-      "sha": "eb175c35ed60e214acd0bc154f8776d010f84c8b",
-      "date": "2023-08-09",
-      "quarter": "2023Q3",
-      "churn_90d": 585,
+      "sha": "d3a4f2e23f0b72c3756731705b858070c45f2fbc",
+      "date": "2022-01-27",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -210,10 +187,128 @@
       ]
     },
     {
-      "sha": "e8225026544d001fb16a1b73ca965de072a61507",
+      "sha": "a5eeb338f1f88f991b48921eb21e74f58c0c0bc3",
+      "date": "2022-05-04",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "7e692c9c21bae441ffc97d85271ca3960ba2f506",
+      "date": "2022-06-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "3a0d817bb8fcdf2ce0ce7da8849d3d3d3c930085",
+      "date": "2022-06-16",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "4f52a6fbdc638846bf49801d397fffe5f5db8c07",
+      "date": "2022-10-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "b1ab30de08f5f6aa6918a859f8fa1dbaaa0c1a50",
+      "date": "2022-11-11",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "6b0751c6790406f2e605bdb919ed5cfb349ed777",
+      "date": "2023-08-01",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "2d9d09fd3fa3da8c254278d7be0a9e52f3df1e62",
+      "date": "2023-09-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "b7d03cc82b9ea1063f3e0f5a0793c3f22c8dcdf3",
+      "date": "2023-09-28",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "a1d91e05a4bf54fa74f97365815201b83a234d4d",
       "date": "2023-10-03",
-      "quarter": "2023Q4",
-      "churn_90d": 655,
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -227,10 +322,8 @@
       ]
     },
     {
-      "sha": "f424d451424f01737b7d2bc22666ef184e117565",
-      "date": "2024-03-16",
-      "quarter": "2024Q1",
-      "churn_90d": 469,
+      "sha": "a6ccd20be97a8328918fb2ee3f81774e099c9a0c",
+      "date": "2024-04-18",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -244,10 +337,8 @@
       ]
     },
     {
-      "sha": "3325f2e7592130348d78d6bfdb03aabe616ef4d6",
-      "date": "2024-04-10",
-      "quarter": "2024Q2",
-      "churn_90d": 480,
+      "sha": "450e6198fe9f0a46d5e3d3687ec4365be98270f9",
+      "date": "2024-06-13",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -261,10 +352,8 @@
       ]
     },
     {
-      "sha": "424f3fcaa0196c261f95f983769ad296f200095d",
-      "date": "2024-09-04",
-      "quarter": "2024Q3",
-      "churn_90d": 383,
+      "sha": "5991a5f496eb059a315edf66f148a9b059d4f199",
+      "date": "2024-12-10",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [
@@ -278,93 +367,8 @@
       ]
     },
     {
-      "sha": "bd8513678f8582d91b4f52f13cd1c6c8416755e3",
-      "date": "2024-10-06",
-      "quarter": "2024Q4",
-      "churn_90d": 391,
-      "eligible_docs_in_sample": 50,
-      "anchors": 50,
-      "horizons_observable": [
-        7,
-        14,
-        30,
-        60,
-        90,
-        180,
-        365
-      ]
-    },
-    {
-      "sha": "9b61d9e5ffaef61486ffda7d084a2a399f2aeb8b",
-      "date": "2025-01-27",
-      "quarter": "2025Q1",
-      "churn_90d": 424,
-      "eligible_docs_in_sample": 50,
-      "anchors": 50,
-      "horizons_observable": [
-        7,
-        14,
-        30,
-        60,
-        90,
-        180,
-        365
-      ]
-    },
-    {
-      "sha": "e74ff6b9c3874450d188bc69f932eda476afa866",
-      "date": "2025-04-08",
-      "quarter": "2025Q2",
-      "churn_90d": 396,
-      "eligible_docs_in_sample": 50,
-      "anchors": 50,
-      "horizons_observable": [
-        7,
-        14,
-        30,
-        60,
-        90,
-        180,
-        365
-      ]
-    },
-    {
-      "sha": "d91cd554ab28cd2fe377cdaf4d0738ba388f94fc",
-      "date": "2025-09-27",
-      "quarter": "2025Q3",
-      "churn_90d": 359,
-      "eligible_docs_in_sample": 50,
-      "anchors": 50,
-      "horizons_observable": [
-        7,
-        14,
-        30,
-        60,
-        90,
-        180
-      ]
-    },
-    {
-      "sha": "8815893a56136a334de91b04455cd2ad300888b4",
-      "date": "2025-11-20",
-      "quarter": "2025Q4",
-      "churn_90d": 345,
-      "eligible_docs_in_sample": 50,
-      "anchors": 50,
-      "horizons_observable": [
-        7,
-        14,
-        30,
-        60,
-        90,
-        180
-      ]
-    },
-    {
-      "sha": "18256dc799ff18e5194d2ebeda90595b6ad98556",
-      "date": "2026-03-15",
-      "quarter": "2026Q1",
-      "churn_90d": 295,
+      "sha": "9176666c0d00cdabb4fd3c8bbdc33216c3d93bbf",
+      "date": "2025-10-03",
       "eligible_docs_in_sample": 50,
       "anchors": 50,
       "horizons_observable": [

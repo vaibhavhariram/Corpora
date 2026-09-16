@@ -1,0 +1,51 @@
+corpus            content/en/docs
+analysis date     2026-09-16
+cutoff            2026-03-20  (180d trailing gap)
+population        10611 commits touching the corpus since 2021-01-01
+
+cohorts           24 (seed 20260916)
+start date   eligible docs  sampled  anchors  horizons
+--------------------------------------------------------
+2021-01-12              50      150       50         7
+2021-01-26              50      150       50         7
+2021-03-26              50      150       50         7
+2021-04-15              50      150       50         7
+2021-05-29              50      150       50         7
+2021-07-15              50      150       50         7
+2021-08-01              50      150       50         7
+2021-10-22              50      150       50         7
+2021-11-06              50      150       50         7
+2022-01-21              50      150       50         7
+2022-01-27              50      150       50         7
+2022-05-04              50      150       50         7
+2022-06-14              50      150       50         7
+2022-06-16              50      150       50         7
+2022-10-14              50      150       50         7
+2022-11-11              50      150       50         7
+2023-08-01              50      150       50         7
+2023-09-14              50      150       50         7
+2023-09-28              50      150       50         7
+2023-10-03              50      150       50         7
+2024-04-18              50      150       50         7
+2024-06-13              50      150       50         7
+2024-12-10              50      150       50         7
+2025-10-03              50      150       50         6
+
+realised N        1200  (target 1200)
+eligible spans/doc  median 19  min 1  max 360
+
+horizon    observable anchors   censoring
+  +   7d                1200       0.0%
+  +  14d                1200       0.0%
+  +  30d                1200       0.0%
+  +  60d                1200       0.0%
+  +  90d                1200       0.0%
+  + 180d                1200       0.0%
+  + 365d                1150       4.2%
+
+stratum distribution at capture (sampling stays uniform — protocol 8a)
+  prose          625   52.1%
+  identifier     327   27.2%
+  numeric        248   20.7%
+
+wrote docs/study/feasibility.json

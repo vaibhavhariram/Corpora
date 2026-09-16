@@ -56,10 +56,16 @@ convenience (ADR-0009).
    **2021-01-01** and a cutoff **180 days before the analysis date**. The trailing gap
    exists so that short offsets are observable for every cohort rather than only for old
    ones.
-2. **Cohort starts.** **M = 24** commits drawn **uniformly at random without replacement**
-   from that population, using a seeded RNG. The seed is recorded in the results artifact.
-   Cohort starts are *not* spread evenly by hand — uniform random over the population, and
-   whatever clustering that produces is reported.
+2. **Cohort starts (amended — ADR-0017).** **One cohort start per calendar quarter**, drawn
+   uniformly at random from the commits in that quarter, for every quarter from 2021Q1
+   through the last quarter containing a commit on or before the cutoff. M is therefore the
+   number of eligible quarters (**21**), not a fixed number. Seed **20260917**, recorded.
+
+   The headline is a calendar-time half-life, so the sampling frame is calendar time.
+   Drawing uniformly over *commits* instead weights cohorts by churn — and editing activity
+   on this corpus fell roughly 2x between 2022 and 2025, which over-represents the high-churn
+   era and biases the headline toward **more** staleness. Superseded design and its output are
+   kept at `docs/study/feasibility-commit-uniform.{txt,json}`.
 3. **Observation grid.** Each cohort is re-resolved at **+7, +14, +30, +60, +90, +180, +365
    days** after its start. For each offset, the snapshot used is the corpus at the **last
    commit on or before** that timestamp.
@@ -98,7 +104,7 @@ normalized text on `(?<=[.!?])\s+`, that satisfies all of:
   and a preamble span has none
 - lies **outside every fenced code block**, using the loader's own fence detection
 
-Target N = 24 × 50 = **1200 anchors**, less any cohort where fewer than 50 eligible
+Target N = 21 × 50 = **1050 anchors**, less any cohort where fewer than 50 eligible
 documents exist. The realised N is reported.
 
 **On the 40-character floor.** Uniqueness is enforced separately, so the floor is not doing
@@ -178,6 +184,18 @@ the assignment is frozen:
 
 Crude on purpose. Every rule is computable from existing code with no judgement, so no
 anchor's stratum can be adjusted after its outcome is known.
+
+## 8d. Churn as a covariate
+
+Each cohort records the number of commits touching the corpus in the **trailing 90 days**
+before its start. With the sampling frame calendar-uniform (ADR-0017) this is a covariate
+rather than a confound, so *"anchors captured in high-churn periods decay faster"* becomes a
+finding the study can report — a per-stratum-style cut obtained for free, and the kind of
+diagnostic detail that gets a study cited rather than nodded at.
+
+Counted against full history, not the windowed population: counting against the population
+truncates the trailing window at `WINDOW_START` and reported 24 commits for 2021Q1 where its
+neighbours had ~500.
 
 ## 8a. Sampling stays uniform regardless of what the strata look like
 
@@ -294,21 +312,30 @@ Run before any anchor was resolved. Script `scripts/study_feasibility.py`, full 
 cannot resolve anchors: it does not import `corpora.anchors` or `corpora.diff`, enforced by
 `check_invariants.py` (`study_firewall`), which was negative-tested in both directions.
 
-**The design runs as specified. No parameter needed changing.**
+**The design runs as specified under the amended frame (ADR-0017).**
 
-| quantity | result |
-|---|---|
-| population | 10,611 commits touching `content/en/docs` since 2021-01-01 |
-| realised N | **1200 / 1200** — every cohort reached its full 50 anchors |
-| eligible spans per document | median 19 (min 1, max 360) |
-| censoring | 0% at +7 through +180 days; **4.2%** at +365 |
-| strata at capture | `prose` 52.1%, `identifier` 27.2%, `numeric` 20.7% |
+| quantity | commit-uniform (superseded) | quarter-stratified (adopted) |
+|---|---|---|
+| cohorts | 24 | **21**, one per quarter, 2021Q1–2026Q1 |
+| realised N | 1200 / 1200 | **1050 / 1050** |
+| eligible spans per document | median 19 | median 19 (min 1, max 317) |
+| censoring +7..+180d | 0% | 0% |
+| censoring +365d | 4.2% | **14.3%** |
+| `prose` | 52.1% | 57.4% |
+| `identifier` | 27.2% | 24.1% |
+| `numeric` | 20.7% | 18.5% |
+| trailing-90d churn | not recorded | 606 (2021Q1) → 295 (2026Q1) |
 
-No stratum is thin, so the oversampling temptation section 8a pre-commits against does not
-arise on this draw. **8a stands regardless** — it is a rule about what may be done, not a
-prediction about what would have been needed.
+Every cohort reached its full 50 anchors under both frames. No stratum is thin, so the
+oversampling temptation section 8a pre-commits against does not arise. **8a stands
+regardless** — it is a rule about what may be done, not a prediction about what would have
+been needed.
 
-### One open question the check surfaced
+The stratum mix shifting toward `prose` under the neutral frame is consistent with the
+predicted direction of ADR-0017: fewer high-churn cohorts, less churn-heavy content, expected
+staleness down. That is a property of the *sample*, not an outcome.
+
+### The open question this surfaced — now resolved by ADR-0017
 
 Cohort starts are drawn uniformly **over commits**, while the headline is reported in
 **calendar time**. Those are not the same frame, and editing activity is not flat:
@@ -333,12 +360,11 @@ resolved to find them:
    That is chance on n = 24, but it compounds the structural effect and leaves the recent
    era thinly covered.
 
-**Not changed unilaterally.** The alternative — stratifying cohort starts uniformly over
-calendar quarters, which would align the sampling frame with the reported unit — is a
-bias-grounds amendment discovered pre-run from design statistics, so it is permitted under
-section 8b. It is recorded here as an open decision rather than applied, because a
-pre-registration edited by its author on the author's own judgement is worth less than one
-edited on the record.
+**Resolved by ADR-0017**, on the record rather than on the author's judgement. The amendment
+passes the test that separates a legitimate protocol edit from a self-serving one: the
+direction of its effect on the headline was predictable before running it, and **it goes
+against us** — fewer high-churn cohorts, expected staleness down. An edit that lowers the
+author's own headline, made pre-run, on a bias the author identified and published.
 
 ## 12. Amendments
 
@@ -347,7 +373,13 @@ below with the date, what changed, why, and explicitly whether it was decided **
 after** results were seen. `docs/study-protocol.md` is `CODEOWNERS`-protected so an
 amendment cannot land without review.
 
-*(none yet)*
+**2026-09-16 — ADR-0017, cohort sampling frame. Decided BEFORE any anchor was resolved.**
+Cohort starts changed from uniform-over-commits to one per calendar quarter. Reason: the
+headline is calendar time and the frame was commit-space, which weights cohorts by churn and
+biases the headline toward more staleness. Found by the pre-run feasibility check, which is
+structurally unable to observe outcomes (`study_firewall`). Predicted direction of the
+effect: **against the headline**. Costs: N 1200 → 1050, censoring at +365d 4.2% → 14.3%. New
+seed 20260917; the superseded draw used 20260916 and its output is retained.
 
 ## 13. Reporting
 
@@ -362,6 +394,13 @@ amendment cannot land without review.
   curation discounts the entire number and cannot tell from outside. Link this file and its
   commit date.
 - **Report the breakdown alongside the aggregate**, per section 8.
+- **One line on what the protocol caught, not as process narration.** Three sessions, three
+  self-serving parameters caught before they shipped: a span floor that silently dropped
+  short technical sentences, an oversampling temptation pre-committed against before the
+  strata were known, and a sampling frame in commit-space under a calendar-time headline.
+  All three were invisible from inside the result and each would have moved the number in our
+  own favour. That is the argument that a pre-registered protocol is the mechanism, not the
+  ceremony.
 - **Include the asymmetry of verification.** Of the defects this project found in itself,
   most were caught by a deterministic gate, one by an adversarial review *of* that gate, and
   one by a human reading an issue and disagreeing with its framing. A deterministic gate
