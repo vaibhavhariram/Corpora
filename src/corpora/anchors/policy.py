@@ -60,9 +60,18 @@ def needs_human(resolution: Resolution) -> bool:
 class RetirementPolicy:
     """When repeated DESTROYED observations justify *proposing* retirement.
 
-    PROVISIONAL NUMBERS. These are placeholders, not measurements. The real distribution
-    — how long a section typically stays missing before it comes back — comes out of the
-    Kubernetes churn study. Do not quote these to a customer as tuned.
+    NOT TUNED, AND DELIBERATELY SO. The Kubernetes study measured the quantity these were
+    waiting on and found transient DESTROYED to be rare: of 36 anchors ever observed
+    DESTROYED, one later resolved again (2.8%, n=36). That weakens the frequency argument
+    ADR-0008 made for hysteresis.
+
+    The defaults stay anyway, on cost asymmetry rather than frequency. Retiring a test
+    wrongly removes coverage permanently and tells nobody; carrying a dead test one cycle
+    longer costs a line in a report. Tuning these downward to match a 2.8% recovery rate
+    would make the product delete more of a customer's coverage on the strength of one
+    small sample — the one direction that warrants leaving a safety threshold alone.
+
+    See ADR-0019. Do not quote these as measured; quote the asymmetry.
     """
 
     consecutive_destroyed: int = 3

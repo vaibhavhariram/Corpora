@@ -83,7 +83,8 @@ jobs:
                `ruff check src scripts`. All four must be clean.
             4. Write an ADR in docs/decisions/ for any non-obvious decision, at the moment
                you make it. State what was decided, why, what was rejected, what reverses it.
-            5. Update docs/status.md.
+            5. Update docs/status.md (the ninety-second bridge) and append
+               detail to docs/journal.md rather than growing status.md.
             6. Stay inside the issue's scope. If you find something else worth doing, note
                it on the issue rather than doing it.
 
