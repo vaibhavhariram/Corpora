@@ -5,35 +5,41 @@ worth believing.*
 
 ---
 
-## The result I nearly published
+## A complete, internally consistent, entirely wrong result
 
-The first execution of this study produced a clean artifact. A full Kaplan–Meier survival
-curve. A per-stratum breakdown. 2800 observations across four cohorts, no errors, no
-warnings. The resolution mix looked entirely plausible — 87% of observations `VALID`, 13%
-`AMBIGUOUS`. Every test in the repository passed. `mypy --strict` was clean. Eight
-deterministic invariant checks passed. An adversarial multi-agent review of the diff engine
-had already run and been acted on.
-
+A study of documentation staleness produced this artifact: a full Kaplan–Meier survival
+curve, a per-stratum breakdown, 2800 observations across four cohorts, no errors, no
+warnings. The resolution mix was plausible — 87% of observations `VALID`, 13% `AMBIGUOUS`.
 The finding was that documentation never goes stale.
+
+At the moment it was generated, every automated check in the repository passed. The full
+test suite. `mypy --strict`. A lint pass over source and tests. Eight deterministic
+invariant checks covering retrieval boundaries, normalizer versioning, and protection of the
+test fixtures themselves. An adversarial multi-agent review of the resolution engine had
+already run and had its findings fixed.
 
 Every one of those 2800 observations had compared the corpus against itself.
 
-`git log` walks `HEAD` unless you give it an explicit ref. The runner checks out each
-cohort's commit with `--detach` before loading its snapshot. So by the time it asked for
-"the newest commit at or before cohort start + 90 days", `HEAD` *was* the cohort commit —
-and `git log` only walks ancestors. The newest ancestor at or before a later date is the
-cohort commit itself. One missing argument, and every downstream number followed from it
-correctly.
+`git log` walks `HEAD` unless given an explicit ref. The runner checks out each cohort's
+commit with `--detach` before loading its snapshot. So when it asked for "the newest commit
+at or before cohort start + 90 days", `HEAD` *was* the cohort commit — and `git log` only
+walks ancestors. The newest ancestor at or before a later date is the cohort commit itself.
+One missing argument, and every downstream number followed from it correctly.
 
-Nothing in the project could see it. The test suite doesn't exercise the runner against real
-git history. The invariant gate models imports and versioning, not snapshot selection. A type
-checker cannot know that two SHAs should differ.
+**No check in the system could observe the defect.** The test suite does not exercise the
+runner against real git history. The invariant gate models imports and versioning, not
+snapshot selection. A type checker cannot know that two SHAs ought to differ. The adversarial
+review had examined the resolution engine, which was working perfectly — it was being fed
+identical inputs.
 
-What caught it was a covariate that exists only as a reporting nicety, computed twice, and
-disagreeing with itself. The runner printed `churn=0` for a quarter where the pre-registered
-feasibility check had independently measured 518.
+What caught it was a covariate that exists only as a reporting nicety, computed twice by two
+pieces of code written a day apart, and disagreeing. The runner reported `churn=0` for a
+quarter where a pre-registered feasibility check had independently measured 518.
 
----
+That is the interesting part, and it generalises past this project: **a result can be
+complete, internally consistent, and wrong in a way that no amount of checking-what-you-
+thought-to-check will reveal.** The mechanism is not carelessness. It is that verification
+only covers the failure modes someone anticipated, and this one was outside all of them.
 
 ## The fourth verification method
 
@@ -53,18 +59,18 @@ only if they are looking at the framing, not the output. None of them can tell y
 one implementation of a quantity is confidently and consistently incorrect, **because there
 is nothing inside a single implementation to compare against.**
 
-Redundancy is the only method that catches that class, and it is the one nobody builds on
-purpose. The churn covariate wasn't a check. It was a nice-to-have that happened to be
-computed in two places by two pieces of code written a day apart.
+Redundancy is the only method that catches that class, and it is the one least often built
+on purpose. The churn covariate was not a check. It was a nice-to-have that happened to exist
+in two implementations.
 
 It is now a real check: the runner cross-references its commit population against the
 pre-registered feasibility artifact and refuses to run on a mismatch, and raises immediately
 if any observation horizon resolves to its own base commit. Both negative-tested by
 deliberately breaking them.
 
-Worth stating plainly: the same bug bit twice. I fixed two of its three call sites, and the
-next run silently drew its sample from two quarters instead of twenty-one. That is what
-converted "fix the call sites" into "add a guard that cannot be bypassed."
+The same defect had three call sites. Fixing two of them let the next run silently draw its
+sample from two quarters instead of twenty-one — which is the argument for a guard that
+cannot be bypassed rather than a careful fix at each site.
 
 ---
 
@@ -190,6 +196,25 @@ its effect on the headline was predictable before running it, and **it went agai
 fewer high-churn cohorts, expected staleness down. It cost N (1200 → 1050) and tripled
 long-horizon censoring, paid in precision rather than bias.
 
+**The study measured something that pointed toward loosening a safety default, and it was
+not loosened.**
+
+The system never retires a test on a single `DESTROYED` observation. The stated reason was
+that sections get emptied in one commit and refilled in the next, so a single observation
+describes a transient state. The study measured that directly: of 36 anchors ever observed
+`DESTROYED`, one later resolved again. Transient absence is rare here, not routine. The
+frequency argument was weaker than it had been made.
+
+The thresholds stayed where they were. The direction the data pointed — "you could be less
+patient" — is the direction in which the product removes more of a customer's coverage, and
+n = 36 on one corpus is not a basis for loosening a safety default. The decision now rests
+where it should have rested from the start: on cost asymmetry. A false `STALE` costs a
+reviewer ten minutes. A false retirement removes a test permanently and tells nobody. Those
+are not comparable, and that does not depend on how often the mistake would occur.
+
+Recorded as a decision record rather than as a silent non-change, because the number that
+undercut the original argument deserves to be as visible as the argument was.
+
 One gap was found after the run and **reported rather than corrected**. The protocol excludes
 spans that are non-unique at capture; the implementation enforced uniqueness only within a
 document, not across the corpus, so 112 anchors were already `AMBIGUOUS` at the first
@@ -215,8 +240,8 @@ the repository passed. That failure mode does not announce itself, and it is not
 is what happens whenever the thing that is wrong is not the thing anything checks.
 
 **Compute your important numbers twice, by different means.** It is the only method that
-catches the case where your single implementation is uniformly wrong, and it is the one
-almost nobody builds deliberately. Mine was an accident that happened to save the study.
+catches a single implementation being uniformly wrong, and it is the one least often built
+deliberately. Here it existed by accident, in a covariate nobody considered load-bearing.
 
 ---
 
