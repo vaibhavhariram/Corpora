@@ -130,12 +130,57 @@ def _span_matches(
     return out
 
 
+def _common_suffix_length(a: list[str], b: list[str]) -> int:
+    """How many trailing elements two heading paths share."""
+    shared = 0
+    for x, y in zip(reversed(a), reversed(b), strict=False):
+        if x != y:
+            break
+        shared += 1
+    return shared
+
+
+def heading_paths_resolve(anchor_path: list[str], candidate_path: list[str]) -> bool:
+    """Whether `candidate_path` still addresses what `anchor_path` addressed.
+
+    Suffix matching, not full-ancestry equality: the paths resolve to each other if their
+    tails agree. Renaming `# Guide` to `# Handbook` leaves `## Termination` addressing the
+    same section; renaming `## Termination` itself does not.
+
+    ADR-0016. The cascade already made this call once — rule 3 exists precisely because a
+    renamed heading is not a reason to lose an anchor. Requiring exact ancestry honoured
+    that at the leaf and contradicted it at the parent: same event, two answers, and only
+    the arbitrary one was implemented.
+    """
+    if not anchor_path and not candidate_path:
+        return True
+    return _common_suffix_length(anchor_path, candidate_path) > 0
+
+
 def _heading_span(document: Document, heading_path: list[str]) -> HeadingSpan | None:
-    """The heading whose full path equals `heading_path`, if it still exists."""
+    """The heading that still addresses `heading_path`, if any.
+
+    An exact full-ancestry match wins outright. Otherwise the heading sharing the longest
+    suffix, which recovers a section whose ancestors were renamed or re-parented — the
+    common case in real documentation, and the one that used to report DESTROYED.
+
+    Ties break on document order so the result is deterministic. A repeated leaf name
+    cannot mislead about *whether the evidence is intact*: this function is reached only
+    after the span was found nowhere, so the span-hash count has already spoken.
+    """
+    if not heading_path:
+        return None
+
+    best: HeadingSpan | None = None
+    best_shared = 0
     for h in document.headings:
-        if list(h.path) == list(heading_path):
+        path = list(h.path)
+        if path == list(heading_path):
             return h
-    return None
+        shared = _common_suffix_length(path, list(heading_path))
+        if shared > best_shared:
+            best, best_shared = h, shared
+    return best
 
 
 def _lines(text: str, start: int, end: int) -> list[tuple[int, int]]:
@@ -259,7 +304,7 @@ def resolve(anchor: Anchor, snapshot: Snapshot) -> ResolutionResult:
                 ),
             )
 
-        if new_heading != anchor.heading_path:
+        if not heading_paths_resolve(anchor.heading_path, new_heading):
             return ResolutionResult(
                 anchor=anchor,
                 resolution=Resolution.VALID_RELOCATED,

@@ -169,6 +169,19 @@ MUTATIONS: list[Mutation] = [
         expected=Resolution.VALID_RELOCATED,
     ),
     Mutation(
+        name="rename_ancestor_heading",
+        description="a parent heading is renamed; the anchored span is untouched",
+        apply=lambda c: _edit(
+            c, "spec-a.md", "# 2 Sleep States", "# 2 Sleep and Wake States"
+        ),
+        anchored_span=SPAN_S3_ENTRY,
+        expected=Resolution.VALID_REPAIRED,
+        note="renaming an ancestor does not change the span's resolvable address — only "
+        "the leaf does. Exact full-ancestry matching called this VALID_RELOCATED, which "
+        "is a harmless mislabel; the same matching rule called the next row DESTROYED, "
+        "which is not. See ADR-0016.",
+    ),
+    Mutation(
         name="move_section_to_other_file",
         description="the whole 3.1 section moves from spec-a into spec-b",
         apply=lambda c: {
@@ -230,6 +243,21 @@ MUTATIONS: list[Mutation] = [
         expected=Resolution.STALE,
         note="nastiest case in the whole product: smallest possible edit, test now asserts "
         "a false fact, everything still looks green",
+    ),
+    Mutation(
+        name="rename_ancestor_and_reword_answer",
+        description="a parent heading is renamed and the anchored sentence is reworded",
+        apply=lambda c: _edit(
+            _edit(c, "spec-a.md", "# 2 Sleep States", "# 2 Sleep and Wake States"),
+            "spec-a.md",
+            "The assertion window\nis 12 milliseconds.",
+            "The controller holds the assertion for a fixed interval.",
+        ),
+        anchored_span=SPAN_S3_ENTRY,
+        expected=Resolution.STALE,
+        note="the money case, and the reason ADR-0016 exists. Under exact full-ancestry "
+        "matching this reported DESTROYED: no review, test retired, expected answer "
+        "silently wrong, and the staleness rate biased downward.",
     ),
     Mutation(
         name="duplicate_section",

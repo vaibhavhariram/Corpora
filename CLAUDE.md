@@ -143,6 +143,13 @@ small lie in its own output. See ADR-0007.
 `STALE` is the money case: the test still looks runnable but its expected answer is now
 wrong. A suite full of `STALE` tests reports green while lying.
 
+**A heading path resolves by suffix, not by full-ancestry equality.** The leaf is the
+address; ancestors are context. Renaming `# Guide` to `# Handbook` leaves `## Termination`
+addressing the same section, so an anchor beneath it is `VALID_REPAIRED` when its span is
+intact and `STALE` when its span changed — not `DESTROYED`. Requiring exact ancestry made a
+renamed root corrupt every anchor below it in the file, and biased the staleness rate
+downward. See ADR-0016.
+
 ## Code rules
 
 - Python 3.11+. Pydantic v2 for models. Typer for CLI. Pytest. No framework beyond these.
