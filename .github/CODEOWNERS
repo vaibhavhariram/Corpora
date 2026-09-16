@@ -15,6 +15,9 @@
 # --- semantics: enum names and the domain model are customer-facing ---
 /src/corpora/models.py          @vaibhavhariram
 
+# --- the pre-registration: an amendment must not land silently ---
+/docs/study-protocol.md         @vaibhavhariram
+
 # --- the rules themselves ---
 /CLAUDE.md                      @vaibhavhariram
 /docs/architecture.md           @vaibhavhariram
