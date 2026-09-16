@@ -40,11 +40,14 @@ Ranked by actual risk:
    thing in the repo is the worst available timing; better to let the new names sit under
    a green suite for two months first. The old names are deliberately not restated here —
    a record naming them would republish exactly what the rename removed.
-2. **"29 of 59 real queries returned literally nothing"** and the pilot recall figures in
-   CLAUDE.md. A named-adjacent company's internal quality failure, attributable in one click.
-   Keep the lesson, delete the numbers.
-3. **The named colleague with commercial intent attached**, `docs/journal.md`. Remove.
-4. **"a semiconductor company"** → "a prior enterprise deployment".
+2. **Exact quality figures from the prior deployment — DONE.** The query counts, pilot
+   recall value, and empty/error counts are removed from `CLAUDE.md` and
+   `docs/architecture.md`. The lessons they supported are kept; the attributable numbers are
+   not. A prior employer's internal quality failure is not ours to quantify in public.
+3. **The named colleague with commercial intent attached — DONE.** Removed when the bridge
+   was rewritten; no name remains anywhere in the repository.
+4. **"a semiconductor company" → "a prior enterprise deployment" — DONE.** Generic references
+   to "the prior system" remain and are fine: they identify no sector and no employer.
 5. **One email** to the former manager. Verbal permission to *use* internal documentation is
    not permission to *publish* derived material publicly under one's own name. One line, gets
    a written yes, costs nothing.

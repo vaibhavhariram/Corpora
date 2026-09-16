@@ -15,8 +15,8 @@ One sentence: **unit tests for AI that reads your company's documents.**
 
 `src/corpora/anchors/` — a re-resolvable pointer to evidence inside a document.
 
-The prior art this replaces: an internal spec-search system at a semiconductor company
-identified evidence by `split_id`, a positional chunk index. Insert a paragraph near the top
+The prior art this replaces: a prior enterprise deployment identified evidence by
+`split_id`, a positional chunk index. Insert a paragraph near the top
 of a document and every downstream `split_id` shifts. That system needed a dedicated audit
 script to check whether expected chunks still existed, because they routinely did not.
 That script was a patch on a broken identity model.
@@ -229,10 +229,11 @@ detail.
 
 ## Context that is not in the code
 
-- The prior system's failure: 29 of 59 real queries returned literally nothing. Pipeline
-  trace read prefilter 0 → keyword 0 → embedding 0 → RRF 0. A five-question pilot two days
-  earlier had scored recall@5 = 1.000. Nobody had filed a bug, because a plausible answer
-  does not look like a failure. This is the class of bug Corpora exists to catch.
+- The prior system's failure: a large fraction of real queries returned literally nothing,
+  while a handful-of-questions pilot days earlier had scored perfectly. The pipeline trace
+  showed zero candidates at every stage, which located the fault at the prefilter boundary
+  rather than in ranking. Nobody had filed a bug, because a plausible answer does not look
+  like a failure. This is the class of bug Corpora exists to catch.
 - The failure was lexical, not semantic: technical identifiers like `PWR_SEQ_VAL=0`, `be=0`,
   `F:LINK_SYNC`, and Unicode dash variants broke tokenization before retrieval ever ran.
   Hence invariant 3 and the verbatim-token triage rule.

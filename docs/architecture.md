@@ -59,7 +59,7 @@ State this contract explicitly to customers.
 
 The single most load-bearing small file in the repo.
 
-On the prior system, query-side and index-side text went through different normalization,
+On a prior deployment, query-side and index-side text went through different normalization,
 which meant the same token could be looked up one way and stored another. The fix was
 described internally as "a vocabulary migration that may require reindexing" — i.e. changing
 normalization invalidates everything downstream. Same is true here, which is why
@@ -207,7 +207,7 @@ The prior design specified both on day three and it is easy to forget one.
 A test is not "question → expected document". It is "question, *within this filter context*,
 → expected document".
 
-On the prior system the context was customer/product applicability, enforced as a hard
+On that prior deployment the context was customer/product applicability, enforced as a hard
 binary gate. In construction it is jurisdiction and client firm. In pharma it is product and
 region. Hence `TestCase.applicability: dict[str, str]`, and "correct document, wrong
 applicability scope" is its own failure-mode tag rather than a plain miss.
@@ -241,9 +241,10 @@ Adapters: `HttpTarget`, `SubprocessTarget`, `PythonTarget`.
 - Atomic checkpoint writes with resume. Long runs against slow enterprise endpoints will be
   interrupted.
 - **Transport error classification** — timeout, TLS, proxy, auth, DNS — kept separate from
-  retrieval outcomes. On the prior system a deployed run returned 51 empty results and 8
-  errors; because errors were classified, that run was correctly reported as "workflow
-  validated, quality not measured" rather than as a catastrophic quality regression.
+  retrieval outcomes. On a prior deployment a run returned mostly empty results alongside a
+  handful of transport errors; because errors were classified separately, that run was
+  correctly reported as "workflow validated, quality not measured" rather than as a
+  catastrophic quality regression.
 - **`Run.identity`.** Results are only interpretable relative to the access scope of the
   identity that executed them. A run by a user who cannot see half the corpus is not a
   quality measurement. Record it. (Permission-aware *evaluation* is deferred; recording the
@@ -260,8 +261,7 @@ Full set, all deterministic:
 `top-1 wrong-citation rate`, `median latency`, `p95 latency`, `empty_result_count`,
 `error_count`.
 
-The last two are not optional. On the prior system, `empty = 29` out of 59 is the number
-that exposed the entire failure. A metrics module that reports only ranking quality will
+The last two are not optional. On a prior deployment, the empty-result count is what exposed the entire failure. A metrics module that reports only ranking quality will
 average a catastrophic outage into a mediocre-looking score.
 
 **Cost tracking is a known gap in the prior work and should be in v1 here.** An eval that
