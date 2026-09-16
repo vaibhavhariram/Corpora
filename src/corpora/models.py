@@ -491,7 +491,31 @@ class Diff(BaseModel):
     added_docs: list[str] = Field(default_factory=list)
     removed_docs: list[str] = Field(default_factory=list)
     changed_docs: list[str] = Field(default_factory=list)
+
     resolutions: list[ResolutionResult] = Field(default_factory=list)
+    """One observation per anchor that could actually be resolved.
+
+    **Every rate computed from a diff is over this list and no other.**
+    """
+
+    unresolvable: list[tuple[Anchor, str]] = Field(default_factory=list)
+    """Anchors that could not be resolved for infrastructural reasons, with the reason.
+
+    An anchor captured under an older `NORMALIZER_VERSION` than the snapshots being
+    compared cannot be resolved against either of them. That is a fact about our tooling,
+    not about the customer's documents. It is not DESTROYED and it is not STALE — those
+    are claims about a corpus, and we are in no position to make either.
+
+    This is invariant 4 one level up: transport errors are not retrieval misses, and
+    infrastructure failures are not staleness. Violate it and the Kubernetes study reports
+    our own version bumps as documentation decay — a confident number describing nothing
+    that happened to the corpus, in the artifact whose whole job is to show we catch
+    exactly that.
+
+    Deliberately a different shape from `resolutions` rather than a `Resolution` member:
+    the type makes the two impossible to pool by accident, which a seventh enum case would
+    not.
+    """
 
     @property
     def needs_review(self) -> list[ResolutionResult]:

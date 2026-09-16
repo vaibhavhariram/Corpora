@@ -48,7 +48,13 @@ jobs:
         run: mypy
 
       - name: Lint
-        run: ruff check src scripts
+        # `tests` is in here deliberately. Ruff caught `assert_comparable(...) is None`
+        # with no `assert` — a test that verified nothing and passed green. That is a
+        # false-green verifier in the directory that holds the verifier, and the invariant
+        # gate cannot see it: `verifier_protected` stops the mutation table being MODIFIED,
+        # nothing stops it being DEGRADED. A row that silently stops asserting is exactly
+        # as bad as a row deleted, and only one of those was caught. See ADR-0014.
+        run: ruff check src scripts tests
 
   review:
     name: review

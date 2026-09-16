@@ -3,9 +3,20 @@
 Update at the end of each working session. This is the bridge to the strategy side —
 short, factual, no narrative.
 
+## Loop: parked
+The stopping rule is answered. #1 and #2 were written by hand in one session, both green;
+the loop produced zero lines and never executed. Finish #3 and the study by hand.
+
+The infrastructure stays committed and dormant. `make invariants` runs regardless and has
+earned its place three times over — it is not the part that was speculative. The agent loop
+specifically solves a throughput problem that does not exist here: one serial critical path,
+one reviewer. Revisit when there is a cofounder, or when the work is genuinely parallel.
+
+Issue #4 (cli) stays open and unlabelled.
+
 ## Current phase
-Phase 1 — anchors complete, loop infrastructure landed, **corpus loader done (issue #1)**.
-`diff/` is next: two items from the study.
+Phase 1 complete: anchors, policy, corpus loader (#1), `diff/` (#2, #3). **The study is
+next** — nothing else stands between here and it.
 
 ## Done
 - Domain model. Now split: `Resolution` observes, `Action` decides (ADR-0008).
