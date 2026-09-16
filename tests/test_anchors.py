@@ -105,6 +105,7 @@ def test_only_stale_and_ambiguous_need_review() -> None:
     assert set(flagged) == {
         "reword_answer_sentence",
         "change_number_in_answer",
+        "rename_ancestor_and_reword_answer",
         "duplicate_section",
     }
 

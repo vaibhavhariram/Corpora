@@ -197,7 +197,25 @@ Two things worth keeping from how it went:
   limitation. Worth noting that a test which fails for the wrong reason is how the second
   bug got found.
 
-## Issue #7 — needs a strategy call before the study
+## Issue #7 — decided and fixed (ADR-0016)
+Suffix matching, not full-ancestry equality. **The leaf is the address; ancestors are
+context.** The deciding argument was that the cascade had already made this call once: rule
+3 exists because a renamed heading is not a reason to lose an anchor, and exact ancestry
+honoured that at the leaf while contradicting it at the parent.
+
+| case | before | after |
+|---|---|---|
+| ancestor renamed + answer reworded | `DESTROYED`, needs_review 0 | **`STALE`, needs_review 1** |
+| ancestor renamed, span intact | `VALID_RELOCATED` | `VALID_REPAIRED` |
+| **leaf** renamed, span intact | `VALID_RELOCATED` | unchanged |
+| root renamed, 3-deep descendant | `DESTROYED` | **`STALE`** |
+
+Mutation table now 15 rows. All 13 pre-existing rows classify exactly as before; the review
+set gained one name and lost none, verified in both directions before touching the test. An
+extension, not a weakening — which is the distinction `verifier_protected` demands an ADR
+for rather than just a label.
+
+## Superseded: the original #7 write-up
 An ancestor heading renamed *and* the answer reworded in the same commit reports
 `DESTROYED`, not `STALE`. No empty heading involved. `_heading_span` requires exact
 full-ancestry equality, so a renamed grandparent makes every descendant a miss.
@@ -237,6 +255,29 @@ The line-based normalizer check that went quiet on uncommitted work. The negativ
 passed when it should have failed. The test that asserted nothing. The reviewer that
 reported green having skipped. Worth a line in the study writeup: the discipline that finds
 these is the same one we are selling.
+
+## The five false greens — this is the study's opening paragraph
+Not a confession. The argument.
+
+1. `normalizer_versioned` was line-based, so `make invariants` went blind on uncommitted work
+2. a negative test passed when it should have failed — which is how #1 was found
+3. a test asserted nothing and passed green, in the directory that holds the verifier
+4. the reviewer reported green having skipped, twice over: no API key, and the action's own
+   refusal to run when `pr.yml` differs from `main` — a guardrail that switches itself off in
+   precisely the PR that modifies it, while its status tick claims it ran
+5. **92 tests passing over a loader that corrupted `heading_path` for every heading below a
+   stray `#`**
+
+The fifth is the one that makes the case. A full green suite, `mypy --strict`, ruff across
+`src` and `tests`, seven deterministic invariants — and the money case was still silently
+routed from `STALE` to `DESTROYED` by one character in a regex. No fixture contained an empty
+heading, so nothing could see it.
+
+That is the product thesis demonstrated on ourselves, before any customer data exists.
+*Your tests are green and your answer key is wrong* is the pitch, and we have a
+reproduction — with the diff, the classification flip, and the commit that fixed it.
+
+All five are the same shape: **a check that failed to fail.**
 
 ## The critical path
 
