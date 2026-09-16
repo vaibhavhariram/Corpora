@@ -4,7 +4,8 @@ Update at the end of each working session. This is the bridge to the strategy si
 short, factual, no narrative.
 
 ## Current phase
-Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then `diff/`.
+Phase 1 — anchors complete, loop infrastructure landed, **corpus loader done (issue #1)**.
+`diff/` is next: two items from the study.
 
 ## Done
 - Domain model. Now split: `Resolution` observes, `Action` decides (ADR-0008).
@@ -20,16 +21,71 @@ Phase 1 — anchors. Complete. Loop infrastructure landed. Loader is next, then 
   new tests.
 
 ## In progress
-- nothing. Next is the corpus loader (issue #1), then `diff/`.
+- nothing. Next is `diff/build.py` (#3), the last item before the study.
+
+## diff set-diff (issue #2, done by hand)
+`src/corpora/diff/snapshots.py` — `diff_snapshots()` and `assert_comparable()`. 79/79 green.
+
+The set arithmetic is four lines. The guard is the part that earns its place: a normalizer
+or loader version change invalidates every anchor captured under the old version, so a diff
+across one reports **our own version bump as corpus staleness** — a confident pile of STALE
+and DESTROYED that describes nothing that happened to the customer's documents. It raises;
+there is deliberately no permissive mode, because shipping a warning there would mean
+shipping the exact failure we sell against.
+
+Loader versions are compared **per loader, where both snapshots use it**, not as whole
+dicts. Adding spreadsheets to a corpus introduces an `xlsx` entry on one side only; failing
+on that would make growing a corpus impossible while saying nothing about whether the
+Markdown anchors still hold.
+
+A rename reads as one removal plus one addition, and that is correct rather than a gap —
+`doc_key` is a locator (ADR-0010), and the anchors inside a renamed file resolve to
+VALID_RELOCATED via the cascade. The document diff is report metadata; `resolutions` carries
+the meaning.
+
+## Corpus loader (issue #1, done by hand)
+`src/corpora/corpus/loaders/markdown.py` and `src/corpora/corpus/snapshot.py`. Snapshot
+construction is no longer test code. 65/65 green, `mypy --strict` clean.
+
+**It found a bug that would have corrupted the study.** The fixture parser matched
+headings across the whole document, so a shell comment inside a fenced code block parsed
+as an H1:
+
+    # Pods              -> heading (right)
+    ```bash
+    # Create a pod      -> heading (WRONG)
+    ```
+    ## Pod lifecycle    -> path ["Create a pod", "Pod lifecycle"]  (WRONG ancestry)
+
+The invented headings are noise. The corrupted ancestry is the damage: it silently changes
+`heading_path` on a *real* heading, and `heading_path` resolution is what separates `STALE`
+from `DESTROYED`. Kubernetes docs are dense with shell and YAML blocks, so this would have
+moved the headline numbers — and no test would have caught it, because the fixture corpus
+contains no fences and all 39 tests passed either way.
+
+Found by running the parser against realistic input instead of reading it. Third time this
+project has found a defect that way, second time it was invisible to a green suite.
+
+Fixed with fence awareness (backtick and tilde, any length, indented, info strings, unclosed
+runs to EOF) and five tests. ADR-0013 records that and the rest of the loader's boundaries:
+`snapshot_id` is content not clock, undecodable bytes raise rather than substituting U+FFFD,
+dotted paths and symlinks are skipped, Setext headings are a known gap.
+
+`tests/conftest.py` now delegates to the real loader rather than reimplementing it — which
+is how `doc_key = filesystem path` survived in fixtures for weeks while `models.py` asserted
+the opposite. A fixture that reimplements the thing under test agrees with itself forever.
 
 ## Blocked
-- **Two actions only you can take**, and the loop does not run until both are done:
-  1. Upgrade to GitHub Pro. Branch protection and rulesets currently return
-     `403 Upgrade to GitHub Pro or make this repository public`, so CODEOWNERS is
-     inert until then — the file exists and enforces nothing.
-  2. `gh secret set ANTHROPIC_API_KEY` (or `/install-github-app`).
+- **One action, yours: `gh secret set ANTHROPIC_API_KEY`** (or `/install-github-app`).
+  Note the first docs PR needs `gh pr merge N --squash --admin` — its author is also its only
+  eligible reviewer, and GitHub forbids self-approval. Agent PRs are authored by the GitHub
+  App, so they can be approved normally; this only affects PRs opened under your own account.
+  Issue #4 is created and deliberately **not** labelled `agent:ready` — labelling it now
+  would fire a run that dies immediately on the missing key. Label it the moment the secret
+  exists; that is the first live test of the loop.
 
-  Everything else is written, tested, and committed.
+  GitHub Pro is active (the protection endpoint went 403 → 404) and branch protection is
+  applied, so CODEOWNERS now has force.
 
 ## Both strategy calls landed
 
@@ -87,6 +143,55 @@ commit B, neither chosen for convenience.** Random or exhaustive sampling across
 Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
 a reader who suspects curation discounts the whole number and cannot tell from outside.
 
+## The critical path
+
+```
+#1 loader  ->  #2 #3 diff  ->  k8s study  ->  outreach with a real number
+```
+
+Four items. Everything else in the repo — cli, report rendering, targets, metrics,
+generation — is **off** this path and waits.
+
+The study is the only artifact that changes a stranger's behavior. The repo alone does not;
+it is a scaffold with one implemented module. "Your golden set has a half-life of N weeks,
+here is the data" does.
+
+Issue #4 (cli) is deliberately off the critical path. It exists to test the loop, not to
+advance the product.
+
+## Decision rule for the loop
+
+The gate is good and has now caught two bugs in itself, both because a negative test failed
+to fail. But **the loop has not yet written a single line of product code.** Three sessions
+of infrastructure, zero output. Acceptable now; a problem if it continues.
+
+So, a stopping rule decided in advance rather than in the moment:
+
+- **#4 produces a working CLI in one run** → the loop works. Label #2 and move.
+- **#4 takes more than one more session of debugging triggers, permissions, or payloads**
+  → kill the loop and write #1, #2, #3 by hand.
+
+`resolve()` shipped by hand in a single session. The loop is supposed to save time, not
+become the project. Write the rule down now, because the sunk-cost argument is much more
+persuasive after another session of near-misses.
+
+## Loop state
+- **Branch protection on `main`:** required check `invariants`, code-owner review required,
+  force-push and deletion blocked, conversation resolution required.
+- `enforce_admins` is deliberately **false**. As the sole code owner you cannot approve your
+  own PR, so enforcing on admins would deadlock you on anything you open yourself. The agent
+  is not an admin and is fully blocked; for you it turns a silent merge into an explicit
+  override, which is the deliberate second action that was wanted.
+- **Labels:** `agent:ready` (input), `agent` (counts against the WIP cap), `verifier-change`.
+- **Issues:** #1 loader, #2 diff set-diff, #3 diff build, #4 cli. None labelled yet.
+- **First labelled issue is #4, not #1.** The loop is untested: `issues: [labeled]` is not in
+  the action's documented event list, the WIP cap has never declined anything, and the
+  reviewer has never gated on `needs: invariants` in a real run. The first labelled issue is
+  not "build the loader" — it is "does any of this fire." #4 is small, real, off the critical
+  path, and already gated by `library_first`. Label #2 only after watching the loop work end
+  to end. **#1 was built by hand** rather than waiting on the loop, because it is first on
+  the critical path and the loop is blocked on a secret only you can set.
+
 ## Loop infrastructure (this session)
 Deterministic gate first, one reviewer for the residue. The framing correction was yours and
 it was right: most invariants are mechanically checkable, and putting a prose reviewer on a
@@ -143,6 +248,12 @@ spurious version bump. 39/39 still green.
     protection lands.
 
 ## Open questions
+- **`tests/` is not linted in CI.** `pr.yml` runs `ruff check src scripts`. Writing #2's
+  tests, ruff caught `assert_comparable(...) is None` with no `assert` — a test that
+  verified nothing and passed. That is the exact class of defect this project exists to
+  catch, and CI would not have seen it. Adding `tests` to the lint step means first fixing
+  three pre-existing findings, two of which are in verifier files and so need a
+  `verifier-change` label plus an ADR. Small, deliberate, worth doing.
 - `RetirementPolicy` thresholds are unmeasured placeholders. First real output of the k8s
   study should be the distribution that replaces them.
 - Four pre-existing `ruff` findings remain in scaffold files (import ordering in

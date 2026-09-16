@@ -1,61 +1,38 @@
-"""Test helpers. Builds Snapshots from plain dicts so fixtures stay readable."""
+"""Test helpers. Builds Snapshots from plain dicts so fixtures stay readable.
+
+Both functions delegate to the real loader in `src/`. They used to be independent
+reimplementations, which is how `doc_key = filesystem path` lived here for weeks while
+`models.py` asserted the opposite. A fixture that reimplements the thing under test can
+agree with itself forever while disagreeing with production.
+"""
 
 from __future__ import annotations
 
-import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from corpora.corpus.normalize import NORMALIZER_VERSION, content_hash, normalize
-from corpora.models import Document, HeadingSpan, Snapshot
+from corpora.corpus.loaders.markdown import load_markdown, parse_headings
+from corpora.corpus.snapshot import build_snapshot as _build_snapshot
+from corpora.models import Document, Snapshot
 
-_HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+# `parse_headings` is re-exported, not reimplemented — listing it in __all__ is what
+# keeps `from .conftest import parse_headings` working for any test that wants it.
+__all__ = ["build_snapshot", "parse_headings"]
 
-
-def parse_headings(text: str) -> list[HeadingSpan]:
-    """Minimal Markdown heading parser. Real loaders live in corpus/loaders/."""
-    matches = list(_HEADING.finditer(text))
-    spans: list[HeadingSpan] = []
-    stack: list[tuple[int, str]] = []
-
-    for i, m in enumerate(matches):
-        level = len(m.group(1))
-        title = m.group(2).strip()
-        body_start = m.end() + 1
-        body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-
-        while stack and stack[-1][0] >= level:
-            stack.pop()
-        stack.append((level, title))
-
-        spans.append(
-            HeadingSpan(
-                path=[t for _, t in stack],
-                level=level,
-                start=body_start,
-                end=body_end,
-            )
-        )
-    return spans
+_FIXTURE_CAPTURED_AT = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def build_snapshot(files: dict[str, str], snapshot_id: str) -> Snapshot:
-    docs: dict[str, Document] = {}
-    for path, raw in files.items():
-        text = normalize(raw)
-        docs[path] = Document(
-            doc_key=path,
-            source_path=path,
-            content_hash=content_hash(text),
-            normalized_text=text,
-            headings=parse_headings(text),
-            loader="markdown",
-            loader_version="builtin-1",
-        )
-    return Snapshot(
-        snapshot_id=snapshot_id,
-        captured_at=datetime.now(timezone.utc),
+    """Snapshot from `path -> raw text`, with a caller-supplied id.
+
+    The explicit `snapshot_id` is a fixture affordance: tests want to say "v1" and "v2"
+    rather than compare hashes. The real loader computes it from content.
+    """
+    documents: dict[str, Document] = {
+        path: load_markdown(path, raw) for path, raw in files.items()
+    }
+    return _build_snapshot(
+        documents,
         source="fixture://",
-        documents=docs,
-        normalizer_version=NORMALIZER_VERSION,
-        loader_versions={"markdown": "builtin-1"},
+        captured_at=_FIXTURE_CAPTURED_AT,
+        snapshot_id=snapshot_id,
     )
