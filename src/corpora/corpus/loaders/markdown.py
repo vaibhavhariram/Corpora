@@ -19,7 +19,7 @@ from ..normalize import content_hash, normalize
 
 MARKDOWN_LOADER = "markdown"
 
-MARKDOWN_LOADER_VERSION = "builtin-markdown-1.0.0"
+MARKDOWN_LOADER_VERSION = "builtin-markdown-1.1.0"
 """Version of THIS parser, not of a third-party library — there isn't one.
 
 Anchors are only valid within a loader version, because `heading_path` resolution depends
@@ -30,8 +30,20 @@ breaking change and needs a bump here plus an ADR, for the same reason
 
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 
-# ATX headings only. Setext (underlined) headings are a known gap — see ADR-0013.
-_HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+# ATX headings only. Setext (underlined) headings and trailing closing sequences
+# (`## Title ##`) are known gaps — see ADR-0013 and ADR-0015.
+#
+# The whitespace class is `[ \t]`, NOT `\s`. `\s` matches newlines, so on a hashes-only
+# line — `#` alone is a valid CommonMark heading, and normalize() strips a trailing space
+# so `"# "` arrives as `"#"` — `\s+` consumed the blank line and `(.+)$` captured the NEXT
+# line as the title. A real heading on that line vanished from the output, its own hashes
+# ended up inside a phantom title, and every heading below inherited the phantom as root
+# ancestor. See ADR-0015; it flipped STALE to DESTROYED end to end.
+#
+# The title group is optional so an empty heading stays a heading. It is one in CommonMark,
+# and it still terminates the previous section, so dropping it would silently merge its
+# body into the heading above.
+_HEADING = re.compile(r"^(#{1,6})(?:[ \t]+(.+))?$", re.MULTILINE)
 
 # Fenced code blocks, which must be excluded before headings are matched. Technical
 # documentation is full of shell and YAML whose comments start with `#`; parsed as
@@ -94,7 +106,7 @@ def parse_headings(text: str) -> list[HeadingSpan]:
 
     for i, m in enumerate(matches):
         level = len(m.group(1))
-        title = m.group(2).strip()
+        title = (m.group(2) or "").strip()
         body_start = m.end() + 1
         body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
 
