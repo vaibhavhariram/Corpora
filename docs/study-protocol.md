@@ -179,6 +179,57 @@ the assignment is frozen:
 Crude on purpose. Every rule is computable from existing code with no judgement, so no
 anchor's stratum can be adjusted after its outcome is known.
 
+## 8a. Sampling stays uniform regardless of what the strata look like
+
+**Pre-committed before the feasibility check runs.**
+
+If the realised distribution comes back thin in one stratum — say 90% `prose`, 10%
+`identifier` — the obvious move is to oversample `identifier` so the per-stratum estimate is
+powered. That adjustment would **inflate the headline**, because identifier-bearing spans
+almost certainly go stale faster than prose, and it would feel like a methods improvement
+while being made.
+
+So: **sampling is uniform over eligible spans, whatever the strata turn out to be.** A thin
+stratum is reported as underpowered. It is never corrected for by oversampling, reweighting,
+or quota. This turns the stratum numbers into pure information and removes the lever.
+
+## 8b. Frozen parameters
+
+The span floor moved once, from 60 to 40 characters, on the grounds that the higher value
+systematically dropped short technical sentences and biased the sample toward prose. That
+was a bias-direction argument made against three hand-written sentences, not against
+corpus-drawn data, and it is the legitimate kind of parameter change.
+
+**It has now moved. It is frozen.** Further changes to the span floor, the sentence
+splitter, or any eligibility rule require an ADR and must be justified on **bias grounds
+only** — never on realised yield.
+
+If the feasibility check says N is too small, the permitted fixes are **more cohorts (M) or
+more documents per cohort (K)**. Loosening eligibility to manufacture sample size is not
+available, because it trades a known bias for a larger number.
+
+## 8c. The feasibility firewall
+
+A feasibility check may run before the study, and its script and output are committed
+alongside this protocol so a reader can see exactly what was inspected in advance.
+
+The distinction is the one a power analysis draws: confirming the design **can** detect an
+effect is legitimate; looking at the effect is not.
+
+**The check may compute:** eligible documents per cohort, eligible sentences per document,
+realised N after the one-anchor-per-document rule, the censoring rate implied by the date
+grid, which horizons are observable for each cohort, and the stratum distribution at
+capture.
+
+**The check may not resolve anchors.** No classifications, no staleness counts, nothing
+downstream of capture — and not "computed then discarded". *The code path must not exist.*
+
+`scripts/study_feasibility.py` therefore does not import `corpora.anchors` or `corpora.diff`
+at all. It needs neither: stratum assignment is a function of span text alone. This is
+enforced mechanically by `check_invariants.py` (`study_firewall`), not by discipline,
+because a documented promise is exactly the kind of guarantee this project has now watched
+fail five times.
+
 ## 9. Estimator
 
 Kaplan–Meier, which is what right-censored time-to-event data requires. A naive "percentage
@@ -206,6 +257,14 @@ Fixed now so that the result cannot be reframed after it is seen:
 The per-stratum breakdown is reported in all three cases, including when the aggregate is
 uninteresting.
 
+**What a long median would mean, priced now rather than at results time.** If the median
+lands near or above two years, the staleness wedge is weak: detection stops being the
+differentiator and the product falls back to the accept gate, which is more contested, has
+real competitors closing on it, and is a materially worse position. That outcome does not
+end the project, but it changes the pitch, the ICP, and the first outreach email. Publishing
+it anyway is still correct — and it is the only reason anyone will believe the number in the
+case where it is large.
+
 ## 11. Limitations we state ourselves
 
 Listed here so they appear in the writeup rather than in someone's reply:
@@ -227,6 +286,59 @@ Listed here so they appear in the writeup rather than in someone's reply:
   numbers and decimals are unaffected. Short artifacts are removed by the length floor;
   surviving fragments are still valid anchors, since an anchor is content-addressed and does
   not need to be a grammatical sentence.
+
+## 11a. Feasibility check — results
+
+Run before any anchor was resolved. Script `scripts/study_feasibility.py`, full output
+`docs/study/feasibility.txt`, machine-readable `docs/study/feasibility.json`. The script
+cannot resolve anchors: it does not import `corpora.anchors` or `corpora.diff`, enforced by
+`check_invariants.py` (`study_firewall`), which was negative-tested in both directions.
+
+**The design runs as specified. No parameter needed changing.**
+
+| quantity | result |
+|---|---|
+| population | 10,611 commits touching `content/en/docs` since 2021-01-01 |
+| realised N | **1200 / 1200** — every cohort reached its full 50 anchors |
+| eligible spans per document | median 19 (min 1, max 360) |
+| censoring | 0% at +7 through +180 days; **4.2%** at +365 |
+| strata at capture | `prose` 52.1%, `identifier` 27.2%, `numeric` 20.7% |
+
+No stratum is thin, so the oversampling temptation section 8a pre-commits against does not
+arise on this draw. **8a stands regardless** — it is a rule about what may be done, not a
+prediction about what would have been needed.
+
+### One open question the check surfaced
+
+Cohort starts are drawn uniformly **over commits**, while the headline is reported in
+**calendar time**. Those are not the same frame, and editing activity is not flat:
+
+| year | commits | % of population | cohorts drawn | expected |
+|---|---|---|---|---|
+| 2021 | 2222 | 20.9% | 9 | 5.0 |
+| 2022 | 2695 | 25.4% | 7 | 6.1 |
+| 2023 | 2278 | 21.5% | 4 | 5.2 |
+| 2024 | 1697 | 16.0% | 3 | 3.8 |
+| 2025 | 1437 | 13.5% | 1 | 3.3 |
+| 2026 | 282 | 2.7% | 0 | 0.6 |
+
+Two separate effects, both computed from dates and commit counts alone — no anchor was
+resolved to find them:
+
+1. **Structural.** Uniform-over-commits weights cohorts by churn. Activity fell roughly 2x
+   from 2022 to 2025, so the high-churn era is over-represented by construction. If
+   high-churn periods also decay faster, the calendar-time headline is biased toward *more*
+   staleness — the self-serving direction, and therefore the one to be most suspicious of.
+2. **This draw.** 9 cohorts landed in 2021 against 5.0 expected and 1 in 2025 against 3.3.
+   That is chance on n = 24, but it compounds the structural effect and leaves the recent
+   era thinly covered.
+
+**Not changed unilaterally.** The alternative — stratifying cohort starts uniformly over
+calendar quarters, which would align the sampling frame with the reported unit — is a
+bias-grounds amendment discovered pre-run from design statistics, so it is permitted under
+section 8b. It is recorded here as an open decision rather than applied, because a
+pre-registration edited by its author on the author's own judgement is worth less than one
+edited on the record.
 
 ## 12. Amendments
 

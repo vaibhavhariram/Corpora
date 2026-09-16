@@ -1,0 +1,384 @@
+{
+  "generated_from": "scripts/study_feasibility.py",
+  "corpus_head": "f8a07233bebaa702ebf5a647d0664e19b42f1597",
+  "analysis_date": "2026-09-16T06:21:20+00:00",
+  "seed": 20260916,
+  "population_commits": 10611,
+  "realised_n": 1200,
+  "target_n": 1200,
+  "horizon_observable": {
+    "7": 1200,
+    "14": 1200,
+    "30": 1200,
+    "60": 1200,
+    "90": 1200,
+    "180": 1200,
+    "365": 1150
+  },
+  "strata": {
+    "numeric": 248,
+    "identifier": 327,
+    "prose": 625
+  },
+  "cohorts": [
+    {
+      "sha": "c6f6fb9a3ee274418e457b88640096089e557cea",
+      "date": "2021-01-12",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "e30a9bb3d993d6247c0b352bd3d0c44e4d9d812e",
+      "date": "2021-01-26",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "16fcbcba6905b34c00f96ca596b89f594fec24a9",
+      "date": "2021-03-26",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "a38531234fd4c27cdf6c9890783bf50e43a8d0aa",
+      "date": "2021-04-15",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "7af03687a0f4afb9b95c69f2157ec157493ec2ce",
+      "date": "2021-05-29",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "36df19e1d508609ffe68aa3937c3a3201e242587",
+      "date": "2021-07-15",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "02ef0100151071db48ab584d3e83c1c4920ca356",
+      "date": "2021-08-01",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "4ecb2fda5beb716232c91dc4d0d13ab10623ff3d",
+      "date": "2021-10-22",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "dfbb64991fae8ab2e1fe8651e677080b8231bd2c",
+      "date": "2021-11-06",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "d677a0eed5e2405ee4ebe8f8211689a25c76d799",
+      "date": "2022-01-21",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "d3a4f2e23f0b72c3756731705b858070c45f2fbc",
+      "date": "2022-01-27",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "a5eeb338f1f88f991b48921eb21e74f58c0c0bc3",
+      "date": "2022-05-04",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "7e692c9c21bae441ffc97d85271ca3960ba2f506",
+      "date": "2022-06-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "3a0d817bb8fcdf2ce0ce7da8849d3d3d3c930085",
+      "date": "2022-06-16",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "4f52a6fbdc638846bf49801d397fffe5f5db8c07",
+      "date": "2022-10-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "b1ab30de08f5f6aa6918a859f8fa1dbaaa0c1a50",
+      "date": "2022-11-11",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "6b0751c6790406f2e605bdb919ed5cfb349ed777",
+      "date": "2023-08-01",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "2d9d09fd3fa3da8c254278d7be0a9e52f3df1e62",
+      "date": "2023-09-14",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "b7d03cc82b9ea1063f3e0f5a0793c3f22c8dcdf3",
+      "date": "2023-09-28",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "a1d91e05a4bf54fa74f97365815201b83a234d4d",
+      "date": "2023-10-03",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "a6ccd20be97a8328918fb2ee3f81774e099c9a0c",
+      "date": "2024-04-18",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "450e6198fe9f0a46d5e3d3687ec4365be98270f9",
+      "date": "2024-06-13",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "5991a5f496eb059a315edf66f148a9b059d4f199",
+      "date": "2024-12-10",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180,
+        365
+      ]
+    },
+    {
+      "sha": "9176666c0d00cdabb4fd3c8bbdc33216c3d93bbf",
+      "date": "2025-10-03",
+      "eligible_docs_in_sample": 50,
+      "anchors": 50,
+      "horizons_observable": [
+        7,
+        14,
+        30,
+        60,
+        90,
+        180
+      ]
+    }
+  ]
+}
