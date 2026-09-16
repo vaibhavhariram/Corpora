@@ -1,0 +1,92 @@
+==================================================================
+STALENESS HALF-LIFE OF A GOLDEN SET
+==================================================================
+corpus         kubernetes/website @ f8a07233beba
+corpora        c33673951c3b
+protocol       docs/study-protocol.md (pre-registered)
+seed           20260917
+anchors        1012 across 21 cohorts
+observations   7200
+unresolvable   0  (excluded from every denominator)
+
+observations by resolution
+  valid                4500   62.5%
+  valid_repaired       1265   17.6%
+  ambiguous             978   13.6%
+  stale                 246    3.4%
+  valid_relocated       124    1.7%
+  destroyed              87    1.2%
+
+==================================================================
+HEADLINE — time to first STALE
+==================================================================
+
+all anchors  (n=1012, events=95)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.997  0.989  0.981  0.973  0.965  0.941  0.901
+
+stratum: prose  (n=554, events=47)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.998  0.991  0.984  0.977  0.966  0.948  0.909
+
+stratum: identifier  (n=234, events=25)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.991  0.987  0.974  0.970  0.970  0.932  0.888
+
+stratum: numeric  (n=224, events=23)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  1.000  0.987  0.982  0.969  0.960  0.933  0.894
+
+==================================================================
+COVARIATE — churn, split at the median of 511 commits/90d
+==================================================================
+
+high churn  (n=488, events=55)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.998  0.994  0.982  0.967  0.961  0.928  0.887
+
+low churn  (n=524, events=40)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.996  0.985  0.981  0.979  0.969  0.952  0.914
+
+==================================================================
+SECONDARY — DESTROYED, reported separately
+==================================================================
+An observation about one snapshot, not a retirement (invariant 7). Sections get
+emptied in one commit and refilled in the next, so the recovery rate below is the
+reason a single DESTROYED must never retire a test.
+
+  anchors ever DESTROYED         36
+  ...later resolvable again      1  (2.8%)
+
+  Every one of those recoveries would have been a test deleted from a
+  customer's coverage, silently, had DESTROYED triggered retirement.
+
+time to first DESTROYED  (n=1012, events=36)
+  median survival: not reached
+  +7d  +14d  +30d  +60d  +90d  +180d  +365d
+  0.999  0.995  0.993  0.990  0.986  0.979  0.962
+
+==================================================================
+SENSITIVITY — the one implementation gap found post-run
+==================================================================
+Protocol section 6 excludes "anchors whose span is non-unique at capture".
+The implementation checked uniqueness only WITHIN a document, not across the
+corpus, so 112 anchors were already AMBIGUOUS at the first horizon. Those can
+never show STALE, so in principle they dilute the headline.
+
+  AS RUN (pre-registered)          n=1012  stale=95  S(365d)=0.901  9.9% @ 1y
+  degenerate-at-capture excluded   n= 900  stale=83  S(365d)=0.902  9.8% @ 1y
+
+The correction moves the headline by 0.1 points and in our own favour, which is
+why it is reported rather than applied. The AS RUN figure is the headline.
+
+Of 114 anchors ever AMBIGUOUS, 112 were ambiguous from the first observation
+and only 2 became ambiguous later. Cross-document sentence duplication in this
+corpus is a starting condition, not a decay mode.

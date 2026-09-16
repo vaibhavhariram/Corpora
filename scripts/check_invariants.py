@@ -96,7 +96,9 @@ MODEL_AND_NETWORK_PACKAGES = frozenset(
 
 # Only `generate/` may reach a model. Everything that decides a pass/fail, a score, a
 # bucket, or a resolution must be provably unable to.
-GRADING_PACKAGES = ("metrics", "run", "triage", "anchors", "diff", "report", "benchmark")
+GRADING_PACKAGES = (
+    "metrics", "run", "triage", "anchors", "diff", "report", "benchmark", "study",
+)
 MODEL_ALLOWED_PACKAGES = ("generate",)
 
 VERIFIER_FILES = ("tests/test_anchors.py", "tests/fixtures/mutations.py")
