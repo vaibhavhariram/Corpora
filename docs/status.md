@@ -1,397 +1,145 @@
 # Status
 
-Update at the end of each working session. This is the bridge to the strategy side —
-short, factual, no narrative.
+Updated at the end of each working session. This is the bridge to the strategy side —
+readable in ninety seconds, no diff required.
 
-## Loop: parked
-The stopping rule is answered. #1 and #2 were written by hand in one session, both green;
-the loop produced zero lines and never executed. Finish #3 and the study by hand.
+## Where things stand
 
-The infrastructure stays committed and dormant. `make invariants` runs regardless and has
-earned its place three times over — it is not the part that was speculative. The agent loop
-specifically solves a throughput problem that does not exist here: one serial critical path,
-one reviewer. Revisit when there is a cofounder, or when the work is genuinely parallel.
+**Phase 1 is complete and the study is pre-registered.** Anchors, policy, corpus loader,
+`diff/`, and a protocol committed before any anchor is resolved. 107 tests green,
+`mypy --strict` clean, `ruff` clean across `src` `scripts` `tests`, eight deterministic
+invariants holding.
 
-Issue #4 (cli) stays open and unlabelled.
+## The remaining path
 
-## Current phase
-Phase 1 complete: anchors, policy, corpus loader (#1), `diff/` (#2, #3). **The study is
-next** — nothing else stands between here and it.
+```
+run the study once  ->  write it up
+```
 
-## Done
-- Domain model. Now split: `Resolution` observes, `Action` decides (ADR-0008).
-- Versioned normalizer, with technical-identifier handling.
-- Anchor capture.
-- **`anchors/resolve()` — the cascade.** 13/13 mutation rows classify correctly. The two
-  decisive rows verified the right way round: `change_number_in_answer` → `STALE`
-  (reporting "18 milliseconds" as what the text says now), `insert_paragraph_above` →
-  `VALID_REPAIRED` (span shifts 271 → 320, repaired silently, never flagged).
-- **`anchors/policy.py`** — the observation/action seam. `Action.RETIRE` is structurally
-  unreachable from a single resolution.
-- 39/39 green, `mypy --strict` clean, `ruff` clean across `src/corpora/anchors` and the
-  new tests.
-
-## In progress
-- nothing. Next is `diff/build.py` (#3), the last item before the study.
-
-## diff set-diff (issue #2, done by hand)
-`src/corpora/diff/snapshots.py` — `diff_snapshots()` and `assert_comparable()`. 79/79 green.
-
-The set arithmetic is four lines. The guard is the part that earns its place: a normalizer
-or loader version change invalidates every anchor captured under the old version, so a diff
-across one reports **our own version bump as corpus staleness** — a confident pile of STALE
-and DESTROYED that describes nothing that happened to the customer's documents. It raises;
-there is deliberately no permissive mode, because shipping a warning there would mean
-shipping the exact failure we sell against.
-
-Loader versions are compared **per loader, where both snapshots use it**, not as whole
-dicts. Adding spreadsheets to a corpus introduces an `xlsx` entry on one side only; failing
-on that would make growing a corpus impossible while saying nothing about whether the
-Markdown anchors still hold.
-
-A rename reads as one removal plus one addition, and that is correct rather than a gap —
-`doc_key` is a locator (ADR-0010), and the anchors inside a renamed file resolve to
-VALID_RELOCATED via the cascade. The document diff is report metadata; `resolutions` carries
-the meaning.
-
-## Corpus loader (issue #1, done by hand)
-`src/corpora/corpus/loaders/markdown.py` and `src/corpora/corpus/snapshot.py`. Snapshot
-construction is no longer test code. 65/65 green, `mypy --strict` clean.
-
-**It found a bug that would have corrupted the study.** The fixture parser matched
-headings across the whole document, so a shell comment inside a fenced code block parsed
-as an H1:
-
-    # Pods              -> heading (right)
-    ```bash
-    # Create a pod      -> heading (WRONG)
-    ```
-    ## Pod lifecycle    -> path ["Create a pod", "Pod lifecycle"]  (WRONG ancestry)
-
-The invented headings are noise. The corrupted ancestry is the damage: it silently changes
-`heading_path` on a *real* heading, and `heading_path` resolution is what separates `STALE`
-from `DESTROYED`. Kubernetes docs are dense with shell and YAML blocks, so this would have
-moved the headline numbers — and no test would have caught it, because the fixture corpus
-contains no fences and all 39 tests passed either way.
-
-Found by running the parser against realistic input instead of reading it. Third time this
-project has found a defect that way, second time it was invisible to a green suite.
-
-Fixed with fence awareness (backtick and tilde, any length, indented, info strings, unclosed
-runs to EOF) and five tests. ADR-0013 records that and the rest of the loader's boundaries:
-`snapshot_id` is content not clock, undecodable bytes raise rather than substituting U+FFFD,
-dotted paths and symlinks are skipped, Setext headings are a known gap.
-
-`tests/conftest.py` now delegates to the real loader rather than reimplementing it — which
-is how `doc_key = filesystem path` survived in fixtures for weeks while `models.py` asserted
-the opposite. A fixture that reimplements the thing under test agrees with itself forever.
+Two items. Nothing else is on it.
 
 ## Blocked
-- **One action, yours: `gh secret set ANTHROPIC_API_KEY`** (or `/install-github-app`).
-  Note the first docs PR needs `gh pr merge N --squash --admin` — its author is also its only
-  eligible reviewer, and GitHub forbids self-approval. Agent PRs are authored by the GitHub
-  App, so they can be approved normally; this only affects PRs opened under your own account.
-  Issue #4 is created and deliberately **not** labelled `agent:ready` — labelling it now
-  would fire a run that dies immediately on the missing key. Label it the moment the secret
-  exists; that is the first live test of the loop.
 
-  GitHub Pro is active (the protection endpoint went 403 → 404) and branch protection is
-  applied, so CODEOWNERS now has force.
+Nothing on the critical path. `ANTHROPIC_API_KEY` is still unset, which only affects the
+parked agent loop — the CI reviewer fails loudly rather than reporting a false green, which
+is the correct behaviour while it has nothing to run with.
 
-## Both strategy calls landed
+## This session: the study protocol
 
-**1. Enum renamed (ADR-0007).** `VALID_MOVED` → `VALID_REPAIRED`. The name was false:
-the widened bucket fires for `reword_neighbor`, where the span sits at offset 271 before
-and after the edit. Nothing moved. Renamed before `diff/` and before the enum reaches
-report rendering. The constraint is now written down for future members — each name must
-be literally true of every case that reaches it.
+`docs/study-protocol.md`, committed **2026-09-16, before any pair was sampled**. Git's
+timestamp is the evidence; "we sampled without curation" is unfalsifiable from outside
+without it.
 
-Cost: this required touching `tests/test_anchors.py`, against the standing rule. One
-identifier, no semantics — same assertion, same mutation, same outcome. An enum alias
-would have kept the suite untouched and left the false name in the codebase, which is the
-thing being fixed.
+**A firewall, enforced not promised.** `scripts/study_feasibility.py` may confirm the design
+can detect an effect and may not look at the effect — the line a power analysis draws. It
+does not import `corpora.anchors` or `corpora.diff` and does not need to, since stratum
+assignment is a function of span text alone. `check_invariants.py` (`study_firewall`)
+enforces it, negative-tested in both directions.
 
-**2. Observation split from action (ADR-0008), and retirement defanged.** `resolve()`
-returns an observation and cannot cause a retirement. `DESTROYED` maps to `WATCH`: record
-it, carry the test forward unchanged. Retirement needs a sustained run of `DESTROYED`
-over time *plus* a named human — `may_retire(..., confirmed_by=...)`, where neither half
-alone is sufficient. Recorded as invariant 7.
+**Feasibility, run pre-registration:**
 
-The refill case is pinned by a test: emptied in one commit, refilled in the next, run
-resets, nothing retires. Hysteresis defaults (3 observations spanning 14 days) are
-**placeholders, not measurements** — they get tuned from the k8s churn data and are not to
-be quoted to a customer as tuned.
+| | result |
+|---|---|
+| population | 10,611 commits touching `content/en/docs` since 2021-01-01 |
+| cohorts | 21, one per calendar quarter, 2021Q1–2026Q1 |
+| realised N | 1050 / 1050 — every cohort reached its full 50 |
+| censoring | 0% at +7..+180d, 14.3% at +365d |
+| strata | `prose` 57.4%, `identifier` 24.1%, `numeric` 18.5% |
+| churn covariate | 606 commits/90d (2021Q1) → 295 (2026Q1) |
 
-This dissolved the emptied-heading open question rather than answering it. It only
-mattered because `DESTROYED` retired things.
+**Amended pre-run (ADR-0017): cohort starts stratified over calendar quarters.** The
+headline is a calendar-time half-life and the frame was commit-space. Reporting in one unit
+while sampling in another is the defect — the ADR-0012 unit decision, one layer down.
+Uniform-over-commits weights cohorts by churn; activity fell ~2x from 2022 to 2025, so the
+high-churn era was over-represented, biasing the headline toward **more** staleness. The
+superseded draw also put **zero cohorts in 2026**, while the claim is about how documentation
+decays *now*.
 
-## The study is a rate, not the 13 rows (ADR-0009)
-Correcting a conflation in the last status note.
+The amendment passes the test that separates a legitimate protocol edit from a self-serving
+one: **the direction was predictable before running it, and it goes against us.** Cost: N
+1200 → 1050, censoring at +365d 4.2% → 14.3% — paid in precision, not bias. New seed 20260917;
+the superseded draw's output is retained for inspection.
 
-- **13 synthetic mutations = a unit test.** Proves the cascade classifies correctly when a
-  document changes in way X. Necessary. Not saleable — we authored both the corpus and the
-  edits, so "you graded your own homework" is a fair reply.
-- **The study = the rate.** Across real commits to a real corpus, what fraction of anchors
-  go stale within K revisions, and the distribution of how fast. "Your golden set has a
-  half-life, and here it is."
+**Pre-committed before the numbers existed:** sampling stays uniform whatever the strata turn
+out to be (no oversampling a thin stratum); the span floor and eligibility rules are frozen
+and may move only on bias grounds, never on yield; and a long median is priced now — if it
+lands near two years the staleness wedge is weak, the product falls back to the accept gate,
+and **that result gets published anyway**.
 
-**Phase 2 is half done.** Synthetic half: complete. Real half: not started, and it is the
-half that goes in an email to Brandon.
+## What Phase 1 shipped
 
-## Build order revised (ADR-0009)
-`diff/` → **k8s study** → phase 3. Not straight to targets/runner/metrics.
+| | |
+|---|---|
+| `anchors/resolve.py` | the cascade; 15/15 mutation rows classify correctly |
+| `anchors/policy.py` | observation/action split; `RETIRE` unreachable from one resolution |
+| `corpus/loaders/markdown.py`, `corpus/snapshot.py` | real loader; snapshot construction out of test code |
+| `diff/snapshots.py` | set-diff plus the compatibility guard |
+| `diff/build.py` | `Diff` assembly; three traps closed |
+| `scripts/check_invariants.py` | eight checks, ~2s, zero tokens, each negative-tested |
 
-The study needs only corpus loader + anchors + diff + Git history — no generation, no
-targets, no metrics, no LLM. Shortest path from working code to an artifact that gets
-replies, and it stress-tests the cascade against churn we did not author.
+## The five false greens — the study's opening paragraph
 
-That second reason is doing real work. Every Phase 1 bug so far came from fixtures we
-wrote, and three were wrong *because* we wrote them by reasoning instead of running. Real
-history is the only source available that cannot reproduce our own mental model back to us.
-
-Method constraint, recorded in CLAUDE.md and ADR-0009: **capture at commit A, resolve at
-commit B, neither chosen for convenience.** Random or exhaustive sampling across history.
-Hand-picked pairs make it a demo, and the sampling method has to be stated in the writeup —
-a reader who suspects curation discounts the whole number and cannot tell from outside.
-
-## diff build (issue #3, done by hand)
-`src/corpora/diff/build.py`. 92/92 green. Three traps, each of which ships a wrong number
-rather than an error:
-
-1. **No pre-filtering to `changed_docs`.** An anchor in an *unchanged* document whose span
-   was duplicated into a changed one must still be `AMBIGUOUS`. Filtering by `doc_key`
-   never looks at it and reports `VALID` — silently, toward a false green.
-2. **Per-anchor isolation, narrow on purpose.** `ValueError` only. A bare `except Exception`
-   would turn every future defect in `resolve()` into a silently shrinking denominator.
-3. **`Diff.unresolvable`, separate from `resolutions`.** Your addition, and the one that
-   would have shipped a wrong number. An anchor captured under an older
-   `NORMALIZER_VERSION` is a fact about our tooling, not the customer's documents — not
-   `DESTROYED`, not `STALE`, never in a denominator. Given a different *shape* from
-   `resolutions` rather than a seventh enum case, so the two cannot be pooled by accident.
-
-## Adversarial review of `diff/build.py`
-Five independent lenses (traps, denominators, cascade interaction, the compatibility guard,
-fitness for the study), each finding then handed to a refute-by-default verifier.
-**13 candidates, 12 refuted, 1 confirmed** — and it was not in `build.py`. It was in the
-loader written one commit earlier.
-
-**The heading regex used `\s`, which matches newlines.** On a hashes-only line — `#` alone
-is valid CommonMark, and `normalize()` strips a trailing space so `"# "` arrives as `"#"` —
-`\s+` ate the newline and `(.+)$` captured the *next* line as the title. A real heading
-there vanished, its hashes ended up inside a phantom level-1 title, and every heading below
-inherited the phantom as root ancestor. One stray line corrupts `heading_path` for the rest
-of the document.
-
-Verified end to end rather than argued: stray `#` in both snapshots, answer reworded —
-`DESTROYED`/`needs_review=0` before, `STALE`/`needs_review=1` after. The money case was
-being routed to `WATCH`. Fixed in ADR-0015, `MARKDOWN_LOADER_VERSION` → 1.1.0, 97 green.
-
-Two things worth keeping from how it went:
-
-- **The verifier corrected half the reviewer's claim.** The reviewer said an untouched
-  document would report `VALID_RELOCATED`; the right answer is `VALID_REPAIRED`, since
-  deleting the line shifts the offset. "The review found something" and "the review was
-  right about everything it found" are different claims. Only the first is true.
-- **My first regression test conflated two defects** and kept failing after the fix was
-  already correct. Isolating them surfaced issue #7 — a separate, pre-existing cascade
-  limitation. Worth noting that a test which fails for the wrong reason is how the second
-  bug got found.
-
-## Issue #7 — decided and fixed (ADR-0016)
-Suffix matching, not full-ancestry equality. **The leaf is the address; ancestors are
-context.** The deciding argument was that the cascade had already made this call once: rule
-3 exists because a renamed heading is not a reason to lose an anchor, and exact ancestry
-honoured that at the leaf while contradicting it at the parent.
-
-| case | before | after |
-|---|---|---|
-| ancestor renamed + answer reworded | `DESTROYED`, needs_review 0 | **`STALE`, needs_review 1** |
-| ancestor renamed, span intact | `VALID_RELOCATED` | `VALID_REPAIRED` |
-| **leaf** renamed, span intact | `VALID_RELOCATED` | unchanged |
-| root renamed, 3-deep descendant | `DESTROYED` | **`STALE`** |
-
-Mutation table now 15 rows. All 13 pre-existing rows classify exactly as before; the review
-set gained one name and lost none, verified in both directions before touching the test. An
-extension, not a weakening — which is the distinction `verifier_protected` demands an ADR
-for rather than just a label.
-
-## Superseded: the original #7 write-up
-An ancestor heading renamed *and* the answer reworded in the same commit reports
-`DESTROYED`, not `STALE`. No empty heading involved. `_heading_span` requires exact
-full-ancestry equality, so a renamed grandparent makes every descendant a miss.
-
-It is **spec-conformant** — rule 5 requires the heading path to resolve and it genuinely
-does not — so changing it means changing the cascade's semantics. That is a CLAUDE.md-level
-decision and explicitly on the do-not-loop list, so it is filed rather than patched. Three
-options sketched in the issue; option 1 (document the bias, report it in the study's
-methodology) is the safe default.
-
-**Its bias understates our own headline staleness rate.** Real documentation gets sections
-re-parented and reworded in the same commit routinely, and every such case is a `STALE` that
-reports as `DESTROYED`. That is the one direction of error that wanting an impressive number
-would never catch, which is a reason to decide it deliberately rather than let the default
-ride.
-
-## Fourth false-green, found this session
-PR #6's `review` job reported **pass in 9 seconds having done nothing.** Two independent
-skip paths, both green:
-
-- `anthropic_api_key: ""` — secret unset
-- `Skipping action due to workflow validation: the workflow file must have identical
-  content to the version on the default branch`
-
-The second is the dangerous one. The action refuses to run whenever `pr.yml` differs from
-`main` — a deliberate protection against a PR rewriting the workflow that reviews it.
-Correct of the action. Dangerous of us: **any PR editing `pr.yml` silently disables the
-reviewer for itself and still shows green.** `CODEOWNERS` guarantees a human looks at the
-change; it does nothing about the reviewer quietly not running, and the green tick actively
-argues that it did.
-
-Now fails loudly with the reason in the annotation. Verified: `review` is red on PR #6 and
-says why.
-
-That is four self-directed defects, all the same shape — **a check that failed to fail.**
-The line-based normalizer check that went quiet on uncommitted work. The negative test that
-passed when it should have failed. The test that asserted nothing. The reviewer that
-reported green having skipped. Worth a line in the study writeup: the discipline that finds
-these is the same one we are selling.
-
-## The five false greens — this is the study's opening paragraph
 Not a confession. The argument.
 
 1. `normalizer_versioned` was line-based, so `make invariants` went blind on uncommitted work
 2. a negative test passed when it should have failed — which is how #1 was found
 3. a test asserted nothing and passed green, in the directory that holds the verifier
-4. the reviewer reported green having skipped, twice over: no API key, and the action's own
-   refusal to run when `pr.yml` differs from `main` — a guardrail that switches itself off in
-   precisely the PR that modifies it, while its status tick claims it ran
+4. the CI reviewer reported green having skipped — no API key, and the action's own refusal
+   to run when `pr.yml` differs from `main`: a guardrail that switches itself off in exactly
+   the PR that modifies it
 5. **92 tests passing over a loader that corrupted `heading_path` for every heading below a
    stray `#`**
 
-The fifth is the one that makes the case. A full green suite, `mypy --strict`, ruff across
-`src` and `tests`, seven deterministic invariants — and the money case was still silently
-routed from `STALE` to `DESTROYED` by one character in a regex. No fixture contained an empty
-heading, so nothing could see it.
+The fifth makes the case. A full green suite, `mypy --strict`, ruff across `src` and `tests`,
+deterministic invariants — and the money case was still silently routed from `STALE` to
+`DESTROYED` by one character in a regex, because no fixture contained an empty heading.
 
-That is the product thesis demonstrated on ourselves, before any customer data exists.
-*Your tests are green and your answer key is wrong* is the pitch, and we have a
-reproduction — with the diff, the classification flip, and the commit that fixed it.
+That is the product thesis demonstrated on ourselves, with a diff and a classification flip,
+before any customer data exists. *Your tests are green and your answer key is wrong.*
 
 All five are the same shape: **a check that failed to fail.**
 
-## The critical path
+**And the honest asymmetry:** most were caught by the deterministic gate, one by an
+adversarial review *of* that gate, one by a human reading an issue and disagreeing with its
+framing. A gate catches what you thought to encode; it cannot catch what you didn't. The
+residue needs a different method, and some of it needs a person. That is the argument for a
+human accept gate in the product, from our own experience rather than a citation.
 
-```
-#1 loader  ->  #2 #3 diff  ->  k8s study  ->  outreach with a real number
-```
+**Three self-serving parameters caught before shipping**, each invisible from inside the
+result and each moving the number in our favour: a span floor that dropped short technical
+sentences, an oversampling temptation, and a sampling frame in the wrong unit. That is the
+argument that a pre-registered protocol is the mechanism, not the ceremony.
 
-Four items. Everything else in the repo — cli, report rendering, targets, metrics,
-generation — is **off** this path and waits.
+## Decisions (ADRs 0005–0017)
 
-The study is the only artifact that changes a stranger's behavior. The repo alone does not;
-it is a scaffold with one implemented module. "Your golden set has a half-life of N weeks,
-here is the data" does.
+- **0007** enum names must be literally true — `VALID_MOVED` fired when nothing moved
+- **0008** observation split from action; retirement never automatic, never from one observation
+- **0009** the study is a rate, not the 13 rows; it runs before phase 3
+- **0010** `doc_key` is a locator, not identity
+- **0012** headline unit is calendar time; releases secondary, commits raw
+- **0013**, **0015** loader boundaries; fenced code and the `\s` heading defect
+- **0014** `tests/` is linted in CI — a false-green verifier lived in the verifier's directory
+- **0016** heading paths resolve by suffix, not full ancestry; the leaf is the address
+- **0017** cohort starts stratified over calendar quarters
 
-Issue #4 (cli) is deliberately off the critical path. It exists to test the loop, not to
-advance the product.
+## Loop: parked
 
-## Decision rule for the loop
-
-The gate is good and has now caught two bugs in itself, both because a negative test failed
-to fail. But **the loop has not yet written a single line of product code.** Three sessions
-of infrastructure, zero output. Acceptable now; a problem if it continues.
-
-So, a stopping rule decided in advance rather than in the moment:
-
-- **#4 produces a working CLI in one run** → the loop works. Label #2 and move.
-- **#4 takes more than one more session of debugging triggers, permissions, or payloads**
-  → kill the loop and write #1, #2, #3 by hand.
-
-`resolve()` shipped by hand in a single session. The loop is supposed to save time, not
-become the project. Write the rule down now, because the sunk-cost argument is much more
-persuasive after another session of near-misses.
-
-## Loop state
-- **Branch protection on `main`:** required check `invariants`, code-owner review required,
-  force-push and deletion blocked, conversation resolution required.
-- `enforce_admins` is deliberately **false**. As the sole code owner you cannot approve your
-  own PR, so enforcing on admins would deadlock you on anything you open yourself. The agent
-  is not an admin and is fully blocked; for you it turns a silent merge into an explicit
-  override, which is the deliberate second action that was wanted.
-- **Labels:** `agent:ready` (input), `agent` (counts against the WIP cap), `verifier-change`.
-- **Issues:** #1 loader, #2 diff set-diff, #3 diff build, #4 cli. None labelled yet.
-- **First labelled issue is #4, not #1.** The loop is untested: `issues: [labeled]` is not in
-  the action's documented event list, the WIP cap has never declined anything, and the
-  reviewer has never gated on `needs: invariants` in a real run. The first labelled issue is
-  not "build the loader" — it is "does any of this fire." #4 is small, real, off the critical
-  path, and already gated by `library_first`. Label #2 only after watching the loop work end
-  to end. **#1 was built by hand** rather than waiting on the loop, because it is first on
-  the critical path and the loop is blocked on a secret only you can set.
-
-## Loop infrastructure (this session)
-Deterministic gate first, one reviewer for the residue. The framing correction was yours and
-it was right: most invariants are mechanically checkable, and putting a prose reviewer on a
-mechanically checkable constraint is ADR-0004 violated in our own tooling.
-
-`make invariants` — seven checks, pure stdlib, ~2s, zero tokens, never flaky. Each one
-verified in both directions (planted a violation, confirmed the failure, reverted):
-
-| check | invariant | negative test |
-|---|---|---|
-| `no_retrieval` | 1 | planted `import chromadb` → caught |
-| `dependency_allowlist` | 1 | added `langchain` to pyproject → caught |
-| `no_llm_in_grading` | 2 | planted `import anthropic` in `anchors/` → caught |
-| `normalizer_versioned` | 3 | edited normalizer, left version → caught |
-| `verifier_protected` | discipline | both branches tested: label+ADR passes, either missing fails |
-| `library_first` | 6 | branching in `cli.py` → caught |
-| `no_orphan_modules` | scope creep | untested module → caught |
-
-One bug found by testing rather than reasoning: the change-sensitive checks originally used
-`git diff base...HEAD`, which sees only *committed* work. `make invariants` run locally
-before a commit was silently blind. Now diffs from the merge-base against the working tree.
-A gate that goes quiet exactly when you are still editing is a gate you learn to ignore.
-
-A second refinement, found the same way: `normalizer_versioned` was line-based, so a
-comment or docstring edit would have demanded a `NORMALIZER_VERSION` bump — invalidating
-every anchor ever captured in exchange for rewording prose. It now compares parsed ASTs with
-bare string statements stripped, so only changes that could alter normalization trip it.
-Verified in all three directions: comment-only passes, docstring-only passes, a changed dash
-mapping or regex still fails.
-
-Also landed: `.github/CODEOWNERS` (including `/scripts/` and `/.github/` — your catch),
-`pr.yml` with the reviewer gated behind `needs: invariants`, and `agent-dev.yml` with a real
-WIP cap that counts open labelled PRs rather than relying on `concurrency:`.
-
-**Scrub item 1 done (ADR-0011).** Fixture identifiers renamed to generic equivalents across
-fixtures, tests, the normalizer's prose and the docs, while it was still free. The AST
-refinement above is what made it possible to touch `normalize.py`'s docstrings without a
-spurious version bump. 39/39 still green.
+The stopping rule is answered. #1, #2 and #3 were written by hand and are green; the loop
+produced zero lines and never executed. Infrastructure stays committed and dormant —
+`make invariants` runs regardless and has earned its place five times. The agent loop
+specifically solves a throughput problem that does not exist here: one serial critical path,
+one reviewer. Revisit with a cofounder, or when the work is genuinely parallel.
 
 ## Decisions needing a strategy call
-- none outstanding. Two settled this session, both yours:
-  - **ADR-0010: `doc_key` is a locator, not identity.** The docstring was wrong, not the
-    code. Identity is `span_hash`; the cascade already searches other documents, so a rename
-    resolves correctly today with no rename detection and no state. Unblocks the loader.
-  - **ADR-0012: the study's headline unit is calendar time**, with releases as a secondary
-    cut and commits as the raw measurement. "Your golden set has a half-life of roughly N
-    weeks" transfers to every buyer; releases are a Kubernetes artifact that most of the
-    audience does not have, and commit counts confound documentation decay with project
-    velocity. Decided before the run rather than after, for the same reason ADR-0009 fixes
-    the sampling method up front.
-  - **ADR-0011: the repo publishes with the study, not before.** Pro instead of public. The
-    pre-publish scrub is recorded there as a precondition so it survives the eight weeks —
-    including that the fixture rename is the one item whose price goes up once branch
-    protection lands.
+
+None outstanding.
 
 ## Open questions
-- **`tests/` is not linted in CI.** `pr.yml` runs `ruff check src scripts`. Writing #2's
-  tests, ruff caught `assert_comparable(...) is None` with no `assert` — a test that
-  verified nothing and passed. That is the exact class of defect this project exists to
-  catch, and CI would not have seen it. Adding `tests` to the lint step means first fixing
-  three pre-existing findings, two of which are in verifier files and so need a
-  `verifier-change` label plus an ADR. Small, deliberate, worth doing.
-- `RetirementPolicy` thresholds are unmeasured placeholders. First real output of the k8s
-  study should be the distribution that replaces them.
-- Four pre-existing `ruff` findings remain in scaffold files (import ordering in
-  `models.py` and `test_anchors.py`, `Callable` import in `mutations.py`, `datetime.UTC`
-  in `conftest.py`). Cosmetic, untouched, not worth a commit of their own.
+
+- **"Run once" is load-bearing.** M is now set by quarter count, so the frame self-adjusts —
+  a run in 2027 would have 25 quarters and a different N. That is correct behaviour, and it
+  means a second run is a *new* protocol with its own registration, not a re-run of this one.
+- `RetirementPolicy` thresholds remain unmeasured placeholders. The study's `DESTROYED`
+  recovery rate is the empirical basis that should replace them.
+- `enforce_admins` is `false` because a sole code owner cannot approve their own PR. Flip it
+  the day a second reviewer exists (recorded in ADR-0011).
