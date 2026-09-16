@@ -169,6 +169,51 @@ rather than an error:
    `DESTROYED`, not `STALE`, never in a denominator. Given a different *shape* from
    `resolutions` rather than a seventh enum case, so the two cannot be pooled by accident.
 
+## Adversarial review of `diff/build.py`
+Five independent lenses (traps, denominators, cascade interaction, the compatibility guard,
+fitness for the study), each finding then handed to a refute-by-default verifier.
+**13 candidates, 12 refuted, 1 confirmed** — and it was not in `build.py`. It was in the
+loader written one commit earlier.
+
+**The heading regex used `\s`, which matches newlines.** On a hashes-only line — `#` alone
+is valid CommonMark, and `normalize()` strips a trailing space so `"# "` arrives as `"#"` —
+`\s+` ate the newline and `(.+)$` captured the *next* line as the title. A real heading
+there vanished, its hashes ended up inside a phantom level-1 title, and every heading below
+inherited the phantom as root ancestor. One stray line corrupts `heading_path` for the rest
+of the document.
+
+Verified end to end rather than argued: stray `#` in both snapshots, answer reworded —
+`DESTROYED`/`needs_review=0` before, `STALE`/`needs_review=1` after. The money case was
+being routed to `WATCH`. Fixed in ADR-0015, `MARKDOWN_LOADER_VERSION` → 1.1.0, 97 green.
+
+Two things worth keeping from how it went:
+
+- **The verifier corrected half the reviewer's claim.** The reviewer said an untouched
+  document would report `VALID_RELOCATED`; the right answer is `VALID_REPAIRED`, since
+  deleting the line shifts the offset. "The review found something" and "the review was
+  right about everything it found" are different claims. Only the first is true.
+- **My first regression test conflated two defects** and kept failing after the fix was
+  already correct. Isolating them surfaced issue #7 — a separate, pre-existing cascade
+  limitation. Worth noting that a test which fails for the wrong reason is how the second
+  bug got found.
+
+## Issue #7 — needs a strategy call before the study
+An ancestor heading renamed *and* the answer reworded in the same commit reports
+`DESTROYED`, not `STALE`. No empty heading involved. `_heading_span` requires exact
+full-ancestry equality, so a renamed grandparent makes every descendant a miss.
+
+It is **spec-conformant** — rule 5 requires the heading path to resolve and it genuinely
+does not — so changing it means changing the cascade's semantics. That is a CLAUDE.md-level
+decision and explicitly on the do-not-loop list, so it is filed rather than patched. Three
+options sketched in the issue; option 1 (document the bias, report it in the study's
+methodology) is the safe default.
+
+**Its bias understates our own headline staleness rate.** Real documentation gets sections
+re-parented and reworded in the same commit routinely, and every such case is a `STALE` that
+reports as `DESTROYED`. That is the one direction of error that wanting an impressive number
+would never catch, which is a reason to decide it deliberately rather than let the default
+ride.
+
 ## Fourth false-green, found this session
 PR #6's `review` job reported **pass in 9 seconds having done nothing.** Two independent
 skip paths, both green:
